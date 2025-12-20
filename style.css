@@ -1,0 +1,298 @@
+/* ===============================================
+   CONFIGURACIÓN BASE
+   =============================================== */
+
+body {
+    background-color: #e6f2ff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: #001f3f;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+
+/* ===============================================
+   ESTRUCTURA DEL DASHBOARD
+   =============================================== */
+
+.dashboard {
+    display: flex;
+    gap: 30px;
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: flex-start;
+}
+
+/* La columna izquierda es más chiquita y se queda pegada arriba */
+.columna-izquierda {
+    flex: 1;
+    position: sticky;
+    top: 20px;
+}
+
+/* La derecha ocupa más espacio para el planificador */
+.columna-derecha {
+    flex: 2;
+}
+
+
+/* ===============================================
+   SECCIONES Y TARJETAS
+   =============================================== */
+
+section {
+    background-color: white;
+    margin-bottom: 20px;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+section h3 {
+    margin-top: 0;
+    color: #001f3f;
+    font-size: 18px;
+}
+
+
+/* ===============================================
+   INPUTS Y FORMULARIOS
+   =============================================== */
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+
+
+/* ===============================================
+   SECCIÓN DE GASTOS
+   =============================================== */
+
+#horario-gastos {
+    border-top: 6px solid #007bff;
+}
+
+#horario-gastos h2 {
+    text-align: center;
+    color: #001f3f;
+    margin-top: 0;
+}
+
+/* Cada grupo de gastos (Fijos, Variables, Deudas) */
+.seccion-gastos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Los títulos ocupan todo el ancho */
+.seccion-gastos h3 {
+    grid-column: span 2;
+    color: #007bff;
+    border-bottom: 2px solid #e6f2ff;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+/* Filas de gastos fijos con día y valor */
+.fila-gasto {
+    display: flex;
+    gap: 10px;
+    grid-column: span 2;
+}
+
+/* El input del día es más chico */
+.fila-gasto input[placeholder="Día"] {
+    flex: 1;
+}
+
+/* Los inputs de valor son más grandes */
+.fila-gasto input[placeholder^="Valor"], 
+.fila-gasto input[placeholder="Suscripciones"] {
+    flex: 3;
+}
+
+
+/* ===============================================
+   BOTONES
+   =============================================== */
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+
+/* ===============================================
+   AGENDA DE PAGOS (resultado)
+   =============================================== */
+
+#lista-proximos-pagos {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+#lista-proximos-pagos h2 {
+    color: white;
+    text-align: center;
+}
+
+#contenedor-agenda {
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 20px;
+    border-radius: 8px;
+    color: #333;
+}
+
+/* Cada grupo de gastos en la agenda */
+.grupo-gastos {
+    margin-bottom: 25px;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.grupo-gastos h3 {
+    color: #001f3f;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+}
+
+/* Las deudas tienen un estilo especial */
+.grupo-gastos.deudas {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.grupo-gastos.deudas h3 {
+    color: #856404;
+    border-bottom-color: #ffc107;
+}
+
+/* Cada item individual de gasto */
+.item-gasto {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 8px;
+    background-color: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dia-mes {
+    background-color: #007bff;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 12px;
+    min-width: 50px;
+    text-align: center;
+}
+
+.nombre-gasto {
+    flex: 1;
+    margin: 0 15px;
+    font-weight: 500;
+}
+
+.valor-gasto {
+    font-weight: bold;
+    color: #dc3545;
+    font-size: 16px;
+}
+
+/* Resumen total al final */
+.resumen-total {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.resumen-total h3 {
+    margin-top: 0;
+    color: white;
+}
+
+.total-grande {
+    font-size: 32px;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+
+/* ===============================================
+   RESPONSIVE - Para pantallas chiquitas
+   =============================================== */
+
+@media (max-width: 768px) {
+    .dashboard {
+        flex-direction: column;
+        padding: 20px;
+    }
+    
+    .columna-izquierda {
+        position: relative;
+        top: 0;
+    }
+    
+    .seccion-gastos {
+        grid-template-columns: 1fr;
+    }
+    
+    .seccion-gastos h3 {
+        grid-column: span 1;
+    }
+    
+    .fila-gasto {
+        grid-column: span 1;
+    }
+}
