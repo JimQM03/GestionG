@@ -29,6 +29,8 @@
                 <h3>Datos de ingresos</h3>
                 <input type="number" id="num-clases" placeholder="Número de clases dadas">
                 <input type="number" id="CopQuincenal" placeholder="Sueldo en pesos">
+                
+                <textarea id="desc-ingreso" placeholder="Descripcion del ingreso (Ej: Bono Extra)" rows="2"></textarea>
             </section>
             
             <button id="botonGuardar">Guardar</button>
@@ -43,21 +45,15 @@
                 
                 <!-- Gastos que son todos los meses -->
                 <div class="seccion-gastos">
-                    <h3>Gastos Fijos</h3>
+                    <h3>Gastos Fijos y Agenda</h3>
                     
                     <div class="fila-gasto">
-                        <input type="number" id="fecha-arriendo" placeholder="Día" min="1" max="31">
-                        <input type="number" id="gasto-arriendo" placeholder="Valor Arriendo">
+                        <input type="date" id="fecha-gasto-real">
+                        <input type="number" id="valor-gasto-real" placeholder="Monto $">
                     </div>
 
                     <div class="fila-gasto">
-                        <input type="number" id="fecha-servicios" placeholder="Día" min="1" max="31">
-                        <input type="number" id="gasto-servicios" placeholder="Valor Servicios">
-                    </div>
-
-                    <div class="fila-gasto">
-                        <input type="number" id="fecha-suscripciones" placeholder="Día" min="1" max="31">
-                        <input type="number" id="gasto-suscripciones" placeholder="Suscripciones">
+                        <textarea id="desc-gasto" placeholder="¿En qué consistió este gasto?" rows="2" style="width: 100%;"></textarea>
                     </div>
                 </div>
 
@@ -81,12 +77,26 @@
             <!-- Aquí se mostrará el calendario de pagos -->
             <section id="lista-proximos-pagos">
                 <h2>Agenda de Pagos Quincenal</h2>
+                
                 <section id="seccion-historial">
-                <h2>Pestaña de Historial</h2>
-                <div id="contenedor-historial">
-                <p>Aún no hay registros en el historial.</p>
-                </div>
-                <button id="botonBorrarHistorial" style="background-color: #dc3545;">Borrar Historial</button>
+                    <h2>Pestaña de Historial</h2>
+                    <div id="contenedor-historial">
+                        <table border="1" style="width: 100%; margin-bottom: 10px;">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descrición</th>
+                                    <th>Costo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpo-historial">
+                                <tr>
+                                    <td colspan="3" style="text-align: center;">Aún no hay registros en el historial.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                    <button id="botonBorrarHistorial" style="background-color: #dc3545;">Borrar Historial</button>
                 </section>
                 <div id="contenedor-agenda">
                     <p>Ingresa los datos y dale a "Calcular Gastos" para ver tu agenda.</p>

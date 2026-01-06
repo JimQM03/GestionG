@@ -267,13 +267,151 @@ button:active {
     font-weight: bold;
     margin: 10px 0;
 }
+/* ===============================================
+   AJUSTES PARA DESCRIPCIÓN E HISTORIAL
+   =============================================== */
 
+/* Estilo para los cuadros de descripción (Textarea) */
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+    font-family: inherit; /* Para que use la misma letra que el resto */ 
+    resize: vertical; /* Permite que el usuario lo estire solo hacia abajo */
+}
+/* Estilo para la Tabla de Historial (Requisito de revisión) */
+#tabla-historial {
+    width: 100%;
+    border-collapse: collapse; /* Quita espacios entre bordes */
+    background-color: white;
+    color: #333;
+    border-radius: 8px;
+    overflow: hidden;/* Para que las esquinas se vean redondeadas */
+    margin-top: 15px;
+}
+#tabla-historial th{
+    background-color: #001f3f;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-size: 14px;
+}
+#tabla-historial td{
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+/* Estilo para el input de tipo calendario */ 
+input[type="date"]{
+    cursor: pointer;
+    color: #333;
+}
+/* Ajuste para el botón de borrar (Rojo para advertencia) */
+#botonBorrarHistorial{
+    background-color: #dc3545;
+    margin-top: 15px;
+}
+#botonBorrarHistorial:hover{
+    background-color: #a71d2a;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3)
+}
+/* ===============================================
+   ESTILOS DE LOGIN (CENTRALIZADO)
+   =============================================== */
 
+/* Fondo con el gradiente de la agenda para coherencia visual */
+.cuerpo-login {
+    background: linear-gradient(135deg, #667eea 0%, #007bff 100%);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    overflow: hidden;
+}
+/* La tarjeta "flotante" */
+#tarjeta-acceso{
+    background-color: white;
+    width: 100%;
+    max-width: 350px;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    border-top: 6px solid #007bff;/* Mismo azul de la sección gastos */
+}
+/* Estilos de texto usando tus colores base */
+.login-titulo {
+    color: #001f3f; /* Azul marino del header */
+    margin: 0 0 10px 0;
+    font-size: 28px;
+}
+.login-subtitulo {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 14px;
+}
+.campo-grupo {
+    text-align: left;
+    margin-bottom: 15px; 
+}
+.etiqueta-login {
+    font-weight: bold;
+    color: #001f3f;
+    font-size: 14px;
+}
+
+/* Personalización del botón para el Login */
+#botonEntrar {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s ease;
+}
+#botonEntrar:hover{
+    background-color: #001f3f;/* Al pasar el mouse, cambia al azul del header */
+}
+.login-footer {
+    margin-top: 25px;
+    border-top: 1ox solid #eee;/* Una línea sutil para separar */
+    padding-top: 15px;
+}
+.login-footer a {
+    color: #007bff;/* Usamos el morado de tu gradiente para el link */
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+.login-footer a:hover {
+    color: #007bff;/* Cambia al azul brillante al pasar el mouse */
+    text-decoration: underline;
+}
+/* ===============================================
+   ESTILOS ADICIONALES PARA EL FOOTER DEL LOGIN
+   =============================================== */
+.login-footer {
+    margin-top: 25px;
+    border-top: 1px solid #eee; /*Una linea sutil para separar*/
+    padding-top: 15px;
+}
+.login-footer a{
+    color: #764ba2;/* Usamos el morado de tu gradiente para el link */
+}
 /* ===============================================
    RESPONSIVE - Para pantallas chiquitas
    =============================================== */
-
-@media (max-width: 768px) {
+   
+   @media (max-width: 768px) {
     .dashboard {
         flex-direction: column;
         padding: 20px;
