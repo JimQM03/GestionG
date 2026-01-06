@@ -350,3 +350,44 @@ function mostrarAgenda(gastosConFecha, gastosVariables, deudas) {
     contenedorAgenda.innerHTML = html;
 }
 
+// ================================================
+// SECCIÓN 5: MySQL Workbrench
+// ================================================
+
+async function enviarAlServidor(datosGasto) {
+    try {
+        const respuesta = await fetch('http://127.0.0.1:5000/guardar-gasto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosGasto)
+        });
+        const resultado = await respuesta.json();
+        console.log("Respuesta del servidor:", resultado.mensaje);
+    } catch (error) {
+        console.error("Error al conectar con el backend:", error);
+    }
+}
+
+// Función para enviar datos al Backend (Tú, Desarrollador A)
+async function guardarGastoEnBaseDeDatos(nombre, valor, prioridad = 'Normal') {
+    const objetoGasto = {
+        tipo: 'Gasto',
+        nombre: nombre,
+        valor: valor,
+        descripcion: 'Registrado desde la web',
+        prioridad: prioridad
+    };
+
+    try {
+        const respuesta = await fetch('http://127.0.0.1:5001/guardar-gasto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(objetoGasto)
+        });
+        
+        const resultado = await respuesta.json();
+        console.log("Servidor dice:", resultado.mensaje);
+    } catch (error) {
+        console.error("Error conectando al servidor:", error);
+    }
+}
