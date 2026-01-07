@@ -382,7 +382,7 @@ input[type="date"]{
 }
 .login-footer {
     margin-top: 25px;
-    border-top: 1ox solid #eee;/* Una línea sutil para separar */
+    border-top: 1px solid #eee;/* Una línea sutil para separar */
     padding-top: 15px;
 }
 .login-footer a {
@@ -471,7 +471,7 @@ input[type="date"]{
     z-index: 1000;
 }
 
-.notificacion-succes {background-color: #28a745;}
+.notificacion-success {background-color: #28a745;}
 .notificacion-error {background-color: #dc3545;}
 .notificacion-hidden {
     opacity: 0; 
