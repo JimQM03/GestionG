@@ -249,40 +249,44 @@ function renderizarHistorial() {
     if (botonExportar){
         botonExportar.addEventListener("click", exportarHistorial);
     }
-/* ================================================
-   SECCIÓN 4: MySQL via Railway (Backend)
-   ================================================ */
 
-   /* ⚠️ NOTA PARA EL DÍA 2: 
-   Cuando el Desarrollador A te entregue el link, pégalo entre las comillas.
-   Debe verse algo así: "https://proyectogestion-production.up.railway.app/guardar-gasto"
-*/
+// ================================================
+// SECCIÓN 4: Conexión al Backend (Unificada)
+// ================================================
 
-const URL_RAILWAY = "";
-async function guardarGastoEnBaseDeDato(nombre, valor) {
-    /* Si la URL está vacía, mostramos un aviso en consola y no intentamos el envío */
-    if(!URL_RAILWAY){
-        console.warn("Pendiente: Configurar URL de Railway");
-        return;
-    }
-    
-    /* unificamos el nombre del objeto a enviar */
+async function guardarGastoEnBaseDeDatos(nombre, valor, prioridad = 'Normal') {
+    // 1. Preparamos el objeto con todos los campos que pide la tabla de MySQL
     const objetoGasto = {
+        tipo: 'Gasto General', // Categoría por defecto
         nombre: nombre,
         valor: valor,
         descripcion: 'Registrado desde GestionG Web',
-        fecha: new Date().toISOString().slice(0, 10)
+        prioridad: prioridad
     };
-    
+
+    console.log("🚀 Enviando datos a Python...", objetoGasto);
+
     try {
-        const respuesta = await fetch(URL_RAILWAY, {
+        // 2. Hacemos la petición a tu servidor local (App.py)
+        const respuesta = await fetch('http://127.0.0.1:5000/guardar-gasto', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json'},
             body: JSON.stringify(objetoGasto)
         });
-        const resultado = await respuesta.json();
-        console.log("Railway dice:", resultado.mensaje);
-    }catch(error){
-        console.error("Error conectando a Railway:", error);
+        
+        // 3. Analizamos la respuesta del servidor
+        if (respuesta.ok) {
+            const resultado = await respuesta.json();
+            console.log("✅ Servidor dice:", resultado.mensaje);
+            alert("¡Gasto guardado con éxito en Railway!");
+        } else {
+            const errorData = await respuesta.json();
+            console.error("❌ Error en el servidor:", errorData.mensaje);
+            alert("Error del servidor: " + errorData.mensaje);
+        }
+
+    } catch (error) {
+        console.error("❌ Error de conexión:", error);
+        alert("No se pudo conectar con el servidor Python. ¿Olvidaste ejecutar 'python app.py'?");
     }
 }
