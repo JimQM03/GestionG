@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>GestiónG - Control de Finanzas</title>
+</head>
+<body>
+    <!-- Encabezado principal -->
+    <header>Gestión de cuentas</header>
+
+    <main class="dashboard">
+        <!-- ============================================
+             COLUMNA IZQUIERDA - Resumen y entradas
+        ============================================ -->
+        <div class="columna-izquierda">
+            
+            <!-- Sección de resumen: muestra los cálculos -->
+            <section id="resumenes">
+                <h3>Tu resumen</h3>
+                <p>Sueldo: <span id="Mostrar-sueldo">0</span> COP</p>   
+                <p>Ahorro Quincenal (10%): <span id="Ahorro-quincenal">0</span> COP</p>
+                <p>Valor por clase: <span id="valor-clase">0</span> COP</p>
+            </section>
+
+            <!-- Entradas de información básica -->
+            <section id="ingresos">
+                <h3>Datos de ingresos</h3>
+                <input type="number" id="num-clases" placeholder="Número de clases dadas">
+                <input type="number" id="CopQuincenal" placeholder="Sueldo en pesos">
+                
+                <textarea id="desc-ingreso" placeholder="Descripcion del ingreso (Ej: Bono Extra)" rows="2"></textarea>
+            </section>
+            
+            <button id="botonGuardar">Guardar</button>
+        </div>
+
+        <!-- ============================================
+             COLUMNA DERECHA - Planificador de gastos
+        ============================================ -->
+        <div class="columna-derecha">
+            <section id="horario-gastos">
+                <h2>Planificador de Gastos</h2>
+                
+                <!-- Gastos que son todos los meses -->
+                <div class="seccion-gastos">
+                    <h3>Gastos Fijos y Agenda</h3>
+                    
+                    <div class="fila-gasto">
+                        <input type="date" id="fecha-gasto-real">
+                        <input type="number" id="valor-gasto-real" placeholder="Monto $">
+                    </div>
+
+                    <div class="fila-gasto">
+                        <textarea id="desc-gasto" placeholder="¿En qué consistió este gasto?" rows="2" style="width: 100%;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Gastos variables del día a día -->
+                <div class="seccion-gastos">
+                    <h3>Gastos Variables</h3>
+                    <input type="number" id="gasto-compras" placeholder="Mercado/Día a día">
+                    <input type="number" id="gasto-antojos" placeholder="Antojos y salidas">
+                </div>
+
+                <!-- Seguimiento de deudas -->
+                <div class="seccion-gastos">
+                    <h3>Deudas</h3>
+                    <input type="number" id="deuda-corto" placeholder="Celular (Corto plazo)">
+                    <input type="number" id="deuda-largo" placeholder="Largo plazo">
+                </div>
+
+                <button id="botonCalcularGastos">Calcular Gastos</button>
+            </section>
+
+            <!-- Aquí se mostrará el calendario de pagos -->
+            <section id="lista-proximos-pagos">
+                <h2>Agenda de Pagos Quincenal</h2>
+                
+                <section id="seccion-historial">
+                    <h2>Pestaña de Historial</h2>
+                    <div id="contenedor-historial">
+                        <table border="1" style="width: 100%; margin-bottom: 10px;">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descrición</th>
+                                    <th>Costo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpo-historial">
+                                <tr>
+                                    <td colspan="3" style="text-align: center;">Aún no hay registros en el historial.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                    <button id="botonBorrarHistorial" style="background-color: #dc3545;">Borrar Historial</button>
+                </section>
+                <div id="contenedor-agenda">
+                    <p>Ingresa los datos y dale a "Calcular Gastos" para ver tu agenda.</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+<<<<<<< HEAD
+</html>
+=======
+</html>
+>>>>>>> 09728b10363f7ef1dc83c178c528e63ede5ce61a
