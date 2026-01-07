@@ -130,17 +130,22 @@ setTimeout(() => { displaySueldo.style.color = "";}, 500);
 //==========================================================================
 
 botonBorrarHistorial.addEventListener("click", () => {
-    // 1. Confirmación 
-    if (confirm("¿Estás seguro de que quieres borrar todo el historial?")) {
-        
-        // 2. Limpiar la memoria del navegador
-        localStorage.removeItem("historialGastos");
+    const modal = document.getElementById("custom-modal");
+    modal.classList.remove("modal-hidden"); // Quitamos la clase que lo esconde 
+});
 
-        // 3. renderizar
-        renderizarHistorial();
-        
-        alert("Historial borrado con éxito ");
-    }
+// Lógica del botón "Confirmar" dentro del Modal
+document.getElementById("modal-confirmar").addEventListener("click", () =>{
+    localStorage.removeItem("historialGastos") // Borramos datos
+    renderizarHistorial(); // Actualizamos tabla
+    document.getElementById("custom-modal").classList.add("modal-hidden");// Cerramos modal
+    mostrarNotificacion("Todo el historial ha sido borrado", "success");
+});
+
+//Lógica del botón "Cancelar" dentro del Modal
+document.getElementById("modal-cancel").addEventListener("click", () => {
+    document.getElementById("custom-modal").classList.add("modal-hidden"); // Solo cerramos
+
 });
 
 function guardarEnHistorial(total, descripcion, fecha) {
@@ -182,11 +187,11 @@ function renderizarHistorial() {
     historial.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
     // Usamos .reduce para sumar todos los "monto" que hay en el historial
-    const sumaTotal = historial.reduce((acumulado, registro) => acumulado + registro.monto, 0);
+    const sumaTotal = historial.reduce((acc, reg) => acc + reg.monto, 0);
 
     // 3. Construimos el HTML detallado
     let html = "";
-    historial.forEach((registro, index) => {
+    historial.forEach((registro) => {
         html += `
             <tr>
                 <td>${registro.fecha}</td>
@@ -199,10 +204,7 @@ function renderizarHistorial() {
     cuerpoHistorial.innerHTML = html;
 
     // Si tienes un elemento para el total, lo actualizamos con la suma
-    const elementoTotal = document.getElementById("total-gastado");
-    if (elementoTotal){
-        elementoTotal.textContent = "$" + sumaTotal.toLocaleString("es-CO");
-    }
+    if(totalElem) totalElem.textContent = "$" + sumaTotal.toLocaleString("es-CO");
 }
 
 //==========================================================================
@@ -248,7 +250,7 @@ function renderizarHistorial() {
     }
 
 // ================================================
-// SECCIÓN 4: Funcionalidad Notificaciones
+// Funcionalidad Notificaciones
 // ================================================
 
 /* Función para mostrar notificaciones elegantes */
@@ -270,41 +272,94 @@ function mostrarNotificacion(mensaje, tipo = "success"){
 }
 
 // ================================================
-// SECCIÓN 5: Conexión al Backend (Unificada)
+// SECCIÓN 4: Conexión al Backend Global (Railway)
 // ================================================
 
-async function guardarGastoEnBaseDeDatos(nombre, valor, prioridad = 'Normal') {
-    // 1. Preparamos el objeto con todos los campos que pide la tabla de MySQL
+// ESTA ES TU NUEVA URL GLOBAL
+const URL_BASE = "https://gestiong-production.up.railway.app";
+
+// Función base para enviar GASTOS a MySQL
+async function guardarGastoEnBaseDeDatos(nombre, valor, fecha, prioridad = 'Alta') {
     const objetoGasto = {
-        tipo: 'Gasto General', // Categoría por defecto
+        tipo: 'Gasto General',
         nombre: nombre,
         valor: valor,
-        descripcion: 'Registrado desde GestionG Web',
-        prioridad: prioridad
+        prioridad: prioridad,
+        fecha: fecha // Enviamos la fecha seleccionada en el input
     };
 
-    console.log("🚀 Enviando datos a Python...", objetoGasto);
+    console.log("🚀 Enviando Gasto a Railway...", objetoGasto);
 
     try {
-        // 2. Hacemos la petición a tu servidor local (App.py)
-        const respuesta = await fetch('http://127.0.0.1:5000/guardar-gasto', {
+        const respuesta = await fetch(`${URL_BASE}/guardar-gasto`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json'},
             body: JSON.stringify(objetoGasto)
         });
         
-        // 3. Analizamos la respuesta del servidor
         if (respuesta.ok) {
-            const resultado = await respuesta.json();
-            console.log("✅ Servidor dice:", resultado.mensaje);
-            mostrarNotificacion("¡Gasto guardado en Railway!", "success");
-        } else {
-            const errorData = await respuesta.json();
-            mostrarNotificacion("Error: " + errorData.mensaje, "error");
+            console.log("✅ Gasto guardado en Railway");
+            mostrarNotificacion("¡Gasto guardado con éxito en la nube!", "success");
         }
-
     } catch (error) {
-        console.error("❌ Error de conexión:", error);
+        console.error("❌ Error de conexión (Gasto):", error);
         mostrarNotificacion("Sin conexión al servidor de Python", "error");
     }
+}
+
+// Función base para enviar INGRESOS a MySQL
+async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
+    const objetoIngreso = {
+        tipo: 'Ingreso Quincenal',
+        monto: monto,
+        clases: clases,
+        descripcion: descripcion || 'Sin descripción'
+    };
+
+    console.log("🚀 Enviando Ingreso a Railway...", objetoIngreso);
+
+    try {
+        const respuesta = await fetch(`${URL_BASE}/guardar-ingreso`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json'},
+            body: JSON.stringify(objetoIngreso)
+        });
+        
+        if (respuesta.ok) {
+            console.log("✅ Ingreso guardado en Railway");
+            alert("¡Ingreso guardado con éxito en la nube!");
+        }
+    } catch (error) {
+        console.error("❌ Error de conexión (Ingreso):", error);
+    }
+}
+
+// ================================================
+// SECCIÓN 5: Activación de Botones (Integrada)
+// ================================================
+
+// Unificamos la lógica para evitar que el código se repita
+if (botonGuardar) {
+    botonGuardar.addEventListener("click", function() {
+        const sueldoVal = parseFloat(inputCop.value) || 0;
+        const clasesVal = parseInt(inputClases.value) || 0;
+        // Obtenemos la descripción específica del ingreso
+        const descVal = document.getElementById("desc-ingreso")?.value || "Sueldo Quincenal";
+
+        if (sueldoVal > 0) {
+            guardarIngresoEnBaseDeDatos(sueldoVal, clasesVal, descVal);
+        }
+    });
+}
+
+if (botonCalcularGastos) {
+    botonCalcularGastos.addEventListener("click", function() {
+        const nombreGasto = descGasto.value;
+        const montoGasto = parseFloat(valorGastoReal.value);
+        const fechaGasto = fechaGastoReal.value;
+
+        if (nombreGasto && montoGasto > 0 && fechaGasto) {
+            guardarGastoEnBaseDeDatos(nombreGasto, montoGasto, fechaGasto);
+        }
+    });
 }
