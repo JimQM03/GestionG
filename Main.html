@@ -7,6 +7,7 @@
     <title>GestiónG - Control de Finanzas</title>
 </head>
 <body>
+    <script src="script.js"></script>
     <!-- Encabezado principal -->
     <header>Gestión de cuentas</header>
 
@@ -113,7 +114,21 @@
             </section>
         </div>
     </main>
+    <!--Contenedor para notificaciones flotantes-->
+    <div id="notificacion-container" class="notificacion-hidden">
+        <span id="notificacion-mensaje"></span>
+    </div>
 
-    <script src="script.js"></script>
+    <!--Modal de confirmación personalizado-->
+    <div id="custom-modal" class="modal-hidden">
+        <div class=modal-content>
+            <h3>¿Estás seguro?</h3>
+            <p id="modal-texto">Esta acción no se podra deshacer.</p>
+            <div class="modal-actions">
+                <button id="modal-confirmar" class="btn-danger">Confirmar</button>
+                <button id="modal-cancelar" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
 </body>
 

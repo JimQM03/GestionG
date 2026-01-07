@@ -98,12 +98,15 @@ const descripcion = descGasto.value;
 
 // Si falta algún dato o el valor es 0, detenemos el proceso con un aviso
 if (valorGasto <=0 || descripcion === "" || fechaSeleccionada === ""){
-    alert("Por favor, completa la descripcion, valor y fecha para registrar el gasto");
+    mostrarNotificacion("Porfavor, completa todos los campos", "error");
     return
 }
 
 // Guardamos en el historial pasando los 3 datos necesarios
 guardarEnHistorial(valorGasto, descripcion, fechaSeleccionada);
+
+// Enviamos el gasto a MySQL / Railway automáticamente
+guardarGastoEnBaseDeDatos(descripcion, valorGasto);
 
 // Restar del sueldo en pantalla
 let sueldoActual = parseFloat(displaySueldo.textContent.replace(/\./g, '')) || 0;
@@ -114,17 +117,11 @@ displaySueldo.textContent = nuevoSueldo.toLocaleString('es-CO');
 displaySueldo.style.color = "#dc3545"; 
 setTimeout(() => { displaySueldo.style.color = "";}, 500);
 
-// --- Limpieza de Gastos Variables ---
-gastoCompras.value = "";
-gastoAntojos.value = "";
-
-// --- Limpieza de Deudas ---
-deudaCorto.value = "";
-deudaLargo.value = "";
-
-valorGastoReal.value = "";
-fechaGastoReal.value = "";
-descGasto.value = "";
+// --- Limpieza de inputs ---
+    [valorGastoReal, fechaGastoReal, descGasto, gastoCompras, gastoAntojos, deudaCorto, deudaLargo].forEach(input => {
+        if(input) input.value="";
+    });
+    mostrarNotificacion("Gasto registrado con éxito", "success");
 });
 
 
@@ -251,7 +248,29 @@ function renderizarHistorial() {
     }
 
 // ================================================
-// SECCIÓN 4: Conexión al Backend (Unificada)
+// SECCIÓN 4: Funcionalidad Notificaciones
+// ================================================
+
+/* Función para mostrar notificaciones elegantes */
+function mostrarNotificacion(mensaje, tipo = "success"){
+    const contenedor = document.getElementById("notificacion-container");
+    const texto = document.getElementById("notificacion-mensaje");
+    
+    if(!contenedor || !texto) return; // Seguridad por si no existen los elementos
+    texto.textContent = mensaje;
+    contenedor.className = `notificacion-${tipo}`;// Cambia color según éxito o error
+
+    // Aparece
+    contenedor.classList.remove("notificacion-hidden");
+
+    // Desaparece despues de 3 segundos
+    setTimeout(() => {
+        contenedor.classList.add("notificacion-hidden");
+    }, 3000);
+}
+
+// ================================================
+// SECCIÓN 5: Conexión al Backend (Unificada)
 // ================================================
 
 async function guardarGastoEnBaseDeDatos(nombre, valor, prioridad = 'Normal') {
@@ -278,15 +297,14 @@ async function guardarGastoEnBaseDeDatos(nombre, valor, prioridad = 'Normal') {
         if (respuesta.ok) {
             const resultado = await respuesta.json();
             console.log("✅ Servidor dice:", resultado.mensaje);
-            alert("¡Gasto guardado con éxito en Railway!");
+            mostrarNotificacion("¡Gasto guardado en Railway!", "success");
         } else {
             const errorData = await respuesta.json();
-            console.error("❌ Error en el servidor:", errorData.mensaje);
-            alert("Error del servidor: " + errorData.mensaje);
+            mostrarNotificacion("Error: " + errorData.mensaje, "error");
         }
 
     } catch (error) {
         console.error("❌ Error de conexión:", error);
-        alert("No se pudo conectar con el servidor Python. ¿Olvidaste ejecutar 'python app.py'?");
+        mostrarNotificacion("Sin conexión al servidor de Python", "error");
     }
 }
