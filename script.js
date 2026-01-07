@@ -251,42 +251,98 @@ function renderizarHistorial() {
     }
 
 // ================================================
-// SECCIÓN 4: Conexión al Backend (Unificada)
+// SECCIÓN 4: Conexión al Backend (Railway)
 // ================================================
 
+// Función base para enviar GASTOS
 async function guardarGastoEnBaseDeDatos(nombre, valor, prioridad = 'Normal') {
-    // 1. Preparamos el objeto con todos los campos que pide la tabla de MySQL
     const objetoGasto = {
-        tipo: 'Gasto General', // Categoría por defecto
+        tipo: 'Gasto General',
         nombre: nombre,
         valor: valor,
         descripcion: 'Registrado desde GestionG Web',
         prioridad: prioridad
     };
 
-    console.log("🚀 Enviando datos a Python...", objetoGasto);
+    console.log("🚀 Enviando Gasto a Python...", objetoGasto);
 
     try {
-        // 2. Hacemos la petición a tu servidor local (App.py)
         const respuesta = await fetch('http://127.0.0.1:5000/guardar-gasto', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json'},
             body: JSON.stringify(objetoGasto)
         });
         
-        // 3. Analizamos la respuesta del servidor
         if (respuesta.ok) {
-            const resultado = await respuesta.json();
-            console.log("✅ Servidor dice:", resultado.mensaje);
+            console.log("✅ Gasto guardado en el servidor");
             alert("¡Gasto guardado con éxito en Railway!");
-        } else {
-            const errorData = await respuesta.json();
-            console.error("❌ Error en el servidor:", errorData.mensaje);
-            alert("Error del servidor: " + errorData.mensaje);
+        }
+    } catch (error) {
+        console.error("❌ Error de conexión (Gasto):", error);
+        alert("No se pudo conectar con el servidor para el gasto.");
+    }
+}
+
+// Función base para enviar INGRESOS
+async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
+    const objetoIngreso = {
+        tipo: 'Ingreso Quincenal',
+        monto: monto,
+        clases: clases,
+        descripcion: descripcion || 'Sin descripción'
+    };
+
+    console.log("🚀 Enviando Ingreso a Python...", objetoIngreso);
+
+    try {
+        const respuesta = await fetch('http://127.0.0.1:5000/guardar-ingreso', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json'},
+            body: JSON.stringify(objetoIngreso)
+        });
+        
+        if (respuesta.ok) {
+            console.log("✅ Ingreso guardado en el servidor");
+            alert("¡Ingreso guardado con éxito en Railway!");
+        }
+    } catch (error) {
+        console.error("❌ Error de conexión (Ingreso):", error);
+    }
+}
+
+// ================================================
+// SECCIÓN 5: Activación de Botones (Final)
+// ================================================
+
+// 1. LADO IZQUIERDO: Botón Guardar (Ingresos)
+if (botonGuardar) {
+    botonGuardar.addEventListener("click", function() {
+        const sueldoVal = parseFloat(inputCop.value) || 0;
+        const clasesVal = parseInt(inputClases.value) || 0;
+        const descVal = document.getElementById("desc-ingreso").value;
+
+        if (sueldoVal <= 0) {
+            alert("Ingresa un sueldo válido");
+            return;
         }
 
-    } catch (error) {
-        console.error("❌ Error de conexión:", error);
-        alert("No se pudo conectar con el servidor Python. ¿Olvidaste ejecutar 'python app.py'?");
-    }
+        // Ejecutar envío a servidor
+        guardarIngresoEnBaseDeDatos(sueldoVal, clasesVal, descVal);
+    });
+}
+
+// 2. LADO DERECHO: Botón Calcular Gastos (Gastos)
+if (botonCalcularGastos) {
+    botonCalcularGastos.addEventListener("click", function() {
+        const nombreGasto = descGasto.value;
+        const montoGasto = parseFloat(valorGastoReal.value);
+
+        if (!nombreGasto || isNaN(montoGasto) || montoGasto <= 0) {
+            // La validación ya la hace tu lógica visual de arriba
+            return;
+        }
+
+        // Ejecutar envío a servidor
+        guardarGastoEnBaseDeDatos(nombreGasto, montoGasto, "Alta");
+    });
 }
