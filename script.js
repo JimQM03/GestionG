@@ -184,43 +184,42 @@ function renderizarHistorial() {
 }
 
 // ================================================
-// SECCIÓN 5: MySQL Workbrench
+// SECCIÓN 5: Conexión al Backend (Unificada)
 // ================================================
 
-async function enviarAlServidor(datosGasto) {
-    try {
-        const respuesta = await fetch('http://127.0.0.1:5000/guardar-gasto', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datosGasto)
-        });
-        const resultado = await respuesta.json();
-        console.log("Respuesta del servidor:", resultado.mensaje);
-    } catch (error) {
-        console.error("Error al conectar con el backend:", error);
-    }
-}
-
-// Función para enviar datos al Backend (Tú, Desarrollador A)
 async function guardarGastoEnBaseDeDatos(nombre, valor, prioridad = 'Normal') {
+    // 1. Preparamos el objeto con todos los campos que pide la tabla de MySQL
     const objetoGasto = {
-        tipo: 'Gasto',
+        tipo: 'Gasto General', // Categoría por defecto
         nombre: nombre,
         valor: valor,
-        descripcion: 'Registrado desde la web',
+        descripcion: 'Registrado desde GestionG Web',
         prioridad: prioridad
     };
 
+    console.log("🚀 Enviando datos a Python...", objetoGasto);
+
     try {
+        // 2. Hacemos la petición a tu servidor local (App.py)
         const respuesta = await fetch('http://127.0.0.1:5000/guardar-gasto', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(objetoGasto)
         });
         
-        const resultado = await respuesta.json();
-        console.log("Servidor dice:", resultado.mensaje);
+        // 3. Analizamos la respuesta del servidor
+        if (respuesta.ok) {
+            const resultado = await respuesta.json();
+            console.log("✅ Servidor dice:", resultado.mensaje);
+            alert("¡Gasto guardado con éxito en Railway!");
+        } else {
+            const errorData = await respuesta.json();
+            console.error("❌ Error en el servidor:", errorData.mensaje);
+            alert("Error del servidor: " + errorData.mensaje);
+        }
+
     } catch (error) {
-        console.error("Error conectando al servidor:", error);
+        console.error("❌ Error de conexión:", error);
+        alert("No se pudo conectar con el servidor Python. ¿Olvidaste ejecutar 'python app.py'?");
     }
 }
