@@ -275,17 +275,19 @@ function mostrarNotificacion(mensaje, tipo = "success"){
 // SECCIÓN 4: Conexión al Backend Global (Railway)
 // ================================================
 
-// ESTA ES TU NUEVA URL GLOBAL
+// Esta es la URL pública de tu servicio Python en Railway
 const URL_BASE = "https://gestiong-production.up.railway.app";
 
-// Función base para enviar GASTOS a MySQL
+/**
+ * Envía un gasto a la base de datos MySQL en Railway
+ */
 async function guardarGastoEnBaseDeDatos(nombre, valor, fecha, prioridad = 'Alta') {
     const objetoGasto = {
         tipo: 'Gasto General',
         nombre: nombre,
         valor: valor,
         prioridad: prioridad,
-        fecha: fecha // Enviamos la fecha seleccionada en el input
+        fecha: fecha // Se envía la fecha seleccionada en el calendario
     };
 
     console.log("🚀 Enviando Gasto a Railway...", objetoGasto);
@@ -293,13 +295,16 @@ async function guardarGastoEnBaseDeDatos(nombre, valor, fecha, prioridad = 'Alta
     try {
         const respuesta = await fetch(`${URL_BASE}/guardar-gasto`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(objetoGasto)
         });
         
         if (respuesta.ok) {
-            console.log("✅ Gasto guardado en Railway");
+            console.log("✅ Gasto guardado con éxito");
             mostrarNotificacion("¡Gasto guardado con éxito en la nube!", "success");
+        } else {
+            const errorData = await respuesta.json();
+            console.error("❌ Error del servidor:", errorData);
         }
     } catch (error) {
         console.error("❌ Error de conexión (Gasto):", error);
@@ -307,7 +312,9 @@ async function guardarGastoEnBaseDeDatos(nombre, valor, fecha, prioridad = 'Alta
     }
 }
 
-// Función base para enviar INGRESOS a MySQL
+/**
+ * Envía un ingreso a la base de datos MySQL en Railway
+ */
 async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
     const objetoIngreso = {
         tipo: 'Ingreso Quincenal',
@@ -321,13 +328,16 @@ async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
     try {
         const respuesta = await fetch(`${URL_BASE}/guardar-ingreso`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(objetoIngreso)
         });
         
         if (respuesta.ok) {
-            console.log("✅ Ingreso guardado en Railway");
+            console.log("✅ Ingreso guardado con éxito");
             alert("¡Ingreso guardado con éxito en la nube!");
+        } else {
+            const errorData = await respuesta.json();
+            console.error("❌ Error del servidor:", errorData);
         }
     } catch (error) {
         console.error("❌ Error de conexión (Ingreso):", error);
@@ -335,31 +345,43 @@ async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
 }
 
 // ================================================
-// SECCIÓN 5: Activación de Botones (Integrada)
+// SECCIÓN 5: Activación de Botones (Final)
 // ================================================
 
-// Unificamos la lógica para evitar que el código se repita
+// 1. LADO IZQUIERDO: Botón Guardar (Ingresos)
 if (botonGuardar) {
     botonGuardar.addEventListener("click", function() {
         const sueldoVal = parseFloat(inputCop.value) || 0;
         const clasesVal = parseInt(inputClases.value) || 0;
-        // Obtenemos la descripción específica del ingreso
-        const descVal = document.getElementById("desc-ingreso")?.value || "Sueldo Quincenal";
+        
+        // CORRECCIÓN: Se usa "desc-ingresos" para coincidir con el ID de tu Main.html
+        const descInput = document.getElementById("desc-ingresos");
+        const descVal = descInput ? descInput.value : "Sueldo Quincenal";
 
-        if (sueldoVal > 0) {
-            guardarIngresoEnBaseDeDatos(sueldoVal, clasesVal, descVal);
+        if (sueldoVal <= 0) {
+            alert("Por favor, ingresa un sueldo válido.");
+            return;
         }
+
+        // Ejecutar el envío al servidor global
+        guardarIngresoEnBaseDeDatos(sueldoVal, clasesVal, descVal);
     });
 }
 
+// 2. LADO DERECHO: Botón Calcular Gastos (Gastos)
 if (botonCalcularGastos) {
     botonCalcularGastos.addEventListener("click", function() {
         const nombreGasto = descGasto.value;
         const montoGasto = parseFloat(valorGastoReal.value);
-        const fechaGasto = fechaGastoReal.value;
+        const fechaSeleccionada = fechaGastoReal.value; // Captura el valor del input tipo date
 
-        if (nombreGasto && montoGasto > 0 && fechaGasto) {
-            guardarGastoEnBaseDeDatos(nombreGasto, montoGasto, fechaGasto);
+        // Validación antes de enviar
+        if (!nombreGasto || isNaN(montoGasto) || montoGasto <= 0 || !fechaSeleccionada) {
+            alert("Por favor, completa el nombre, valor y fecha del gasto.");
+            return;
         }
+
+        // Ejecutar el envío al servidor global incluyendo la fecha
+        guardarGastoEnBaseDeDatos(nombreGasto, montoGasto, fechaSeleccionada);
     });
 }
