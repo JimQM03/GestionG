@@ -76,12 +76,16 @@
 
             <!-- Aquí se mostrará el calendario de pagos -->
             <section id="lista-proximos-pagos">
-                <h2>Agenda de Pagos Quincenal</h2>
+                <!--Contenedor flexible para título y botón de exportar-->
+                <div class="header-historial">
+                    <h2>Agenda de Pagos Quincenal</h2>
+                    <button id="boton-exportar">Exportar</button>
+                </div>
                 
                 <section id="seccion-historial">
                     <h2>Pestaña de Historial</h2>
                     <div id="contenedor-historial">
-                        <table border="1" style="width: 100%; margin-bottom: 10px;">
+                        <table id = "tabla-historial">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
@@ -91,11 +95,16 @@
                             </thead>
                             <tbody id="cuerpo-historial">
                                 <tr>
-                                    <td colspan="3" style="text-align: center;">Aún no hay registros en el historial.</td>
+                                    <td colspan="3" class="texto-centrado">Aún no hay registros en el historial.</td>
                                 </tr>
                             </tbody>
                         </table>
                         
+                        <!-- Resumen del total acumulado -->
+                         <div class="caja-total">
+                            <strong>Total gastado: </strong>
+                            <span id="total-gastado">$0</span>
+                         </div>
                     <button id="botonBorrarHistorial" style="background-color: #dc3545;">Borrar Historial</button>
                 </section>
                 <div id="contenedor-agenda">

@@ -91,19 +91,28 @@ botonGuardar.addEventListener("click", () => {
 document.addEventListener("DOMContentLoaded", renderizarHistorial);
 
 botonCalcularGastos.addEventListener("click", () => {
-// --- Captura del Planificador Único ---
+// Extraemos los valores de los inputs
 const valorGasto = parseFloat(valorGastoReal.value) || 0;
 const fechaSeleccionada = fechaGastoReal.value;
 const descripcion = descGasto.value;
 
-// --- Lógica de guardado y resta ---
-if (valorGasto > 0) {
-    guardarEnHistorial(valorGasto, descripcion, fechaSeleccionada);
-
-    // Restar del sueldo en pantalla
-    let sueldoActual = parseFloat(displaySueldo.textContent.replace(/\./g, '')) || 0;
-    displaySueldo.textContent = (sueldoActual - valorGasto).toLocaleString('es-CO');
+// Si falta algún dato o el valor es 0, detenemos el proceso con un aviso
+if (valorGasto <=0 || descripcion === "" || fechaSeleccionada === ""){
+    alert("Por favor, completa la descripcion, valor y fecha para registrar el gasto");
+    return
 }
+
+// Guardamos en el historial pasando los 3 datos necesarios
+guardarEnHistorial(valorGasto, descripcion, fechaSeleccionada);
+
+// Restar del sueldo en pantalla
+let sueldoActual = parseFloat(displaySueldo.textContent.replace(/\./g, '')) || 0;
+let nuevoSueldo = sueldoActual - valorGasto;
+displaySueldo.textContent = nuevoSueldo.toLocaleString('es-CO');
+
+// Resaltamos el sueldo en rojo brevemente para confirmar el descuento
+displaySueldo.style.color = "#dc3545"; 
+setTimeout(() => { displaySueldo.style.color = "";}, 500);
 
 // --- Limpieza de Gastos Variables ---
 gastoCompras.value = "";
@@ -166,8 +175,17 @@ function renderizarHistorial() {
     // 2. Si no hay nada, mostramos el mensaje por defecto
     if (historial.length === 0) {
         cuerpoHistorial.innerHTML = `<tr><td colspan="3" style="text-align: center;">Aún no hay registros.</td></tr>`;
+        const totalElem = document.getElementById("total-gastado") 
+        // Si borras el historial, el contador de "Total" debe volver a cero
+        if (totalElem) totalElem.textContent = "$0";
         return;
     }
+
+    // Comparamos las fechas para que el gasto más reciente aparezca de primero
+    historial.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    // Usamos .reduce para sumar todos los "monto" que hay en el historial
+    const sumaTotal = historial.reduce((acumulado, registro) => acumulado + registro.monto, 0);
 
     // 3. Construimos el HTML detallado
     let html = "";
@@ -177,50 +195,94 @@ function renderizarHistorial() {
                 <td>${registro.fecha}</td>
                 <td>${registro.descripcion}</td>
                 <td style="color: #dc3545; font-weight: bold;">$${registro.monto.toLocaleString('es-CO')}</td>
-        `;
+            </tr>
+                `;
     });
 
     cuerpoHistorial.innerHTML = html;
-}
 
-// ================================================
-// SECCIÓN 5: MySQL Workbrench
-// ================================================
-
-async function enviarAlServidor(datosGasto) {
-    try {
-        const respuesta = await fetch('http://127.0.0.1:5000/guardar-gasto', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datosGasto)
-        });
-        const resultado = await respuesta.json();
-        console.log("Respuesta del servidor:", resultado.mensaje);
-    } catch (error) {
-        console.error("Error al conectar con el backend:", error);
+    // Si tienes un elemento para el total, lo actualizamos con la suma
+    const elementoTotal = document.getElementById("total-gastado");
+    if (elementoTotal){
+        elementoTotal.textContent = "$" + sumaTotal.toLocaleString("es-CO");
     }
 }
 
-// Función para enviar datos al Backend (Tú, Desarrollador A)
-async function guardarGastoEnBaseDeDatos(nombre, valor, prioridad = 'Normal') {
+//==========================================================================
+// Funcionalidad de Exportación
+//==========================================================================
+
+// Esta función convierte el historial en un archivo de texto (.txt) o CSV
+    function exportarHistorial(){
+        const historial = JSON.parse(localStorage.getItem("historialGastos")) || [];
+
+        if (historial.length === 0){
+            alert("No hay datos para exportar.");
+            return;
+        }
+
+        //Creamos el encabezado del archivo
+        let contenido = "Fecha;Descripcion;Monto\n";
+
+        //Recorremos los datos y los organizamos por filas separadas por punto y coma
+        historial.forEach(reg => {
+            contenido += `${reg.fecha}; ${reg.descripcion}; ${reg.monto}\n`;
+        });
+        // Creamos un "Blob" (un objeto de datos binarios) para generar el archivo
+        const blob = new Blob([contenido], {type:  "text/csv"});
+        const url = URL.createObjectURL(blob);
+
+        // Creamos un enlace invisible para forzar la descarga
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "mi_historial_gastos.csv";
+        document.body.appendChild(a);
+        a.click();
+
+        // Limpiamos el rastro del enlace creado
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // Escuchamos el click en el botón de exportar (asegúrate de que el ID coincida en tu HTML)
+    const botonExportar = document.getElementById("boton-exportar");
+    if (botonExportar){
+        botonExportar.addEventListener("click", exportarHistorial);
+    }
+/* ================================================
+   SECCIÓN 4: MySQL via Railway (Backend)
+   ================================================ */
+
+   /* ⚠️ NOTA PARA EL DÍA 2: 
+   Cuando el Desarrollador A te entregue el link, pégalo entre las comillas.
+   Debe verse algo así: "https://proyectogestion-production.up.railway.app/guardar-gasto"
+*/
+
+const URL_RAILWAY = "";
+async function guardarGastoEnBaseDeDato(nombre, valor) {
+    /* Si la URL está vacía, mostramos un aviso en consola y no intentamos el envío */
+    if(!URL_RAILWAY){
+        console.warn("Pendiente: Configurar URL de Railway");
+        return;
+    }
+    
+    /* unificamos el nombre del objeto a enviar */
     const objetoGasto = {
-        tipo: 'Gasto',
         nombre: nombre,
         valor: valor,
-        descripcion: 'Registrado desde la web',
-        prioridad: prioridad
+        descripcion: 'Registrado desde GestionG Web',
+        fecha: new Date().toISOString().slice(0, 10)
     };
-
+    
     try {
-        const respuesta = await fetch('http://127.0.0.1:5001/guardar-gasto', {
+        const respuesta = await fetch(URL_RAILWAY, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json'},
             body: JSON.stringify(objetoGasto)
         });
-        
         const resultado = await respuesta.json();
-        console.log("Servidor dice:", resultado.mensaje);
-    } catch (error) {
-        console.error("Error conectando al servidor:", error);
+        console.log("Railway dice:", resultado.mensaje);
+    }catch(error){
+        console.error("Error conectando a Railway:", error);
     }
 }
