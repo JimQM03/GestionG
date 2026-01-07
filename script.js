@@ -29,13 +29,11 @@ const displayAhorro = document.getElementById("Ahorro-quincenal");
 const displaySueldo = document.getElementById("Mostrar-sueldo");
 const displayValorClase = document.getElementById("valor-clase");
 
-// Inputs de gastos fijos (con fechas)
-const fechaArriendo = document.getElementById("fecha-arriendo");
-const gastoArriendo = document.getElementById("gasto-arriendo");
-const fechaServicios = document.getElementById("fecha-servicios");
-const gastoServicios = document.getElementById("gasto-servicios");
-const fechaSuscripciones = document.getElementById("fecha-suscripciones");
-const gastoSuscripciones = document.getElementById("gasto-suscripciones");
+// Selectores para la tabla y descripcion
+const cuerpoHistorial = document.getElementById("cuerpo-historial");
+const descGasto = document.getElementById("desc-gasto");
+const fechaGastoReal = document.getElementById("fecha-gasto-real");
+const valorGastoReal = document.getElementById("valor-gasto-real");
 
 // Inputs de gastos variables
 const gastoCompras = document.getElementById("gasto-compras");
@@ -80,6 +78,8 @@ botonGuardar.addEventListener("click", () => {
     // Limpiamos para la próxima
     inputCop.value = "";
     inputClases.value = "";
+
+    console.log("Ingreso guardado correctamente.")
 });
 
 
@@ -87,89 +87,23 @@ botonGuardar.addEventListener("click", () => {
 // SECCIÓN 3: Funcionalidad de gastos
 // ================================================
 
-function procesarGastoFijo(nombre, inputValor, inputDia, hoy) {
-    const valor = parseFloat(inputValor.value);
-    const dia = parseInt(inputDia.value);
-
-    // Si el usuario no escribió un precio, ignoramos este gasto
-    if (isNaN(valor)) return null; 
-
-    let mes = hoy.getMonth();
-    let año = hoy.getFullYear();
-
-    // La lógica que ya tenías: si el día ya pasó, va para el otro mes
-    if (dia < hoy.getDate()) {
-        mes++;
-    }
-
-    // Devolvemos el objeto "empaquetado" con su fecha real
-    return {
-        nombre: nombre,
-        valor: valor,
-        fecha: new Date(año, mes, dia)
-    };
-}
+// 1. Esto hace que al abrir la página, los datos guardados aparezcan solos
+document.addEventListener("DOMContentLoaded", renderizarHistorial);
 
 botonCalcularGastos.addEventListener("click", () => {
-    // 1. Limpiamos la lista global para nuevos cálculos
-    gastosConFecha = [];
-    const hoy = new Date();
+// --- Captura del Planificador Único ---
+const valorGasto = parseFloat(valorGastoReal.value) || 0;
+const fechaSeleccionada = fechaGastoReal.value;
+const descripcion = descGasto.value;
 
-    // 2. Procesamos los Gastos Fijos usando la "fábrica"
-    // Esto asegura que cada uno tenga un objeto Date real
-    const arriendo = procesarGastoFijo("Arriendo", gastoArriendo, fechaArriendo, hoy);
-    if (arriendo) gastosConFecha.push(arriendo);
+// --- Lógica de guardado y resta ---
+if (valorGasto > 0) {
+    guardarEnHistorial(valorGasto, descripcion, fechaSeleccionada);
 
-    const servicios = procesarGastoFijo("Servicios", gastoServicios, fechaServicios, hoy);
-    if (servicios) gastosConFecha.push(servicios);
-
-    const suscripciones = procesarGastoFijo("Suscripciones", gastoSuscripciones, fechaSuscripciones, hoy);
-    if (suscripciones) gastosConFecha.push(suscripciones);
-
-    // 3. Procesamos los Gastos Variables
-    const gastosVariables = [];
-    if (gastoCompras.value) {
-        gastosVariables.push({
-            nombre: "Mercado/Día a día",
-            valor: parseFloat(gastoCompras.value)
-        });
-    }
-    
-    if (gastoAntojos.value) {
-        gastosVariables.push({
-            nombre: "Antojos y salidas",
-            valor: parseFloat(gastoAntojos.value)
-        });
-    }
-
-    // 4. Procesamos las Deudas
-    const deudas = [];
-    if (deudaCorto.value) {
-        deudas.push({
-            nombre: "Celular (corto plazo)",
-            valor: parseFloat(deudaCorto.value)
-        });
-    }
-    
-    if (deudaLargo.value) {
-        deudas.push({
-            nombre: "Deuda largo plazo",
-            valor: parseFloat(deudaLargo.value)
-        });
-    }
-
-    // 5. Finalmente, mostramos la agenda con toda la información recolectada
-    mostrarAgenda(gastosConFecha, gastosVariables, deudas);
-
-    // --- Limpieza de Gastos Fijos ---
-gastoArriendo.value = "";
-fechaArriendo.value = "";
-
-gastoServicios.value = "";
-fechaServicios.value = "";
-
-gastoSuscripciones.value = "";
-fechaSuscripciones.value = "";
+    // Restar del sueldo en pantalla
+    let sueldoActual = parseFloat(displaySueldo.textContent.replace(/\./g, '')) || 0;
+    displaySueldo.textContent = (sueldoActual - valorGasto).toLocaleString('es-CO');
+}
 
 // --- Limpieza de Gastos Variables ---
 gastoCompras.value = "";
@@ -177,10 +111,11 @@ gastoAntojos.value = "";
 
 // --- Limpieza de Deudas ---
 deudaCorto.value = "";
-deudaLargo.value = ""; 
+deudaLargo.value = "";
 
-//Guardado en el historial
-guardarEnHistorial(totalGeneral);
+valorGastoReal.value = "";
+fechaGastoReal.value = "";
+descGasto.value = "";
 });
 
 
