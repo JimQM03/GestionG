@@ -32,7 +32,7 @@ const displayValorClase = document.getElementById("valor-clase");
 // Selectores para la tabla y descripcion
 const cuerpoHistorial = document.getElementById("cuerpo-historial");
 const descGasto = document.getElementById("desc-gasto");
-const fechaGastoReal = document.getElementById("fecha-gasto-real");
+const fechaGastoReal = document.getElementById("fecha-gasto-real").value;
 const valorGastoReal = document.getElementById("valor-gasto-real");
 
 // Inputs de gastos variables
@@ -250,116 +250,87 @@ function renderizarHistorial() {
         botonExportar.addEventListener("click", exportarHistorial);
     }
 
-// ================================================
-// SECCIÓN 4: Conexión al Backend Global (Railway)
-// ================================================
+// --- SECTOR 4: COMUNICACIÓN DE SUBIDA ---
+const btnCalcular = document.getElementById("btn-calcular");
 
-// Esta es la URL pública de tu servicio Python en Railway
-const URL_BASE = "https://gestiong-production.up.railway.app";
+btnCalcular.addEventListener("click", async () => {
+    // 1. Recolectar datos con IDs exactos de tu Main.html
+    const nombre = document.getElementById("desc-gasto").value;
+    const valor = document.getElementById("valor-gasto-real").value;
+    const prioridad = document.getElementById("prioridad-gasto").value;
+    const fecha = document.getElementById("fecha-gasto-real").value;
 
-/**
- * Envía un gasto a la base de datos MySQL en Railway
- */
-async function guardarGastoEnBaseDeDatos(nombre, valor, fecha, prioridad = 'Alta') {
-    const objetoGasto = {
-        tipo: 'Gasto General',
+    // 2. Validación
+    if (!nombre || !valor || !fecha) {
+        alert("Por favor, completa los campos de descripción, valor y fecha.");
+        return;
+    }
+
+    const datosGasto = {
+        tipo: "Gasto General",
         nombre: nombre,
-        valor: valor,
+        valor: parseFloat(valor),
         prioridad: prioridad,
-        fecha: fecha // Se envía la fecha seleccionada en el calendario
+        fecha: fecha
     };
 
-    console.log("🚀 Enviando Gasto a Railway...", objetoGasto);
-
     try {
-        const respuesta = await fetch(`${URL_BASE}/guardar-gasto`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(objetoGasto)
+        const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datosGasto)
         });
-        
+
         if (respuesta.ok) {
-            console.log("✅ Gasto guardado con éxito");
-            alert("¡Gasto guardado con éxito en la nube!");
+            alert("✅ Gasto guardado en MySQL correctamente.");
+            // Limpiar campos
+            document.getElementById("desc-gasto").value = "";
+            document.getElementById("valor-gasto-real").value = "";
+            
+            // Actualizar la tabla inmediatamente después de guardar
+            cargarHistorial(); 
         } else {
-            const errorData = await respuesta.json();
-            console.error("❌ Error del servidor:", errorData);
+            alert("❌ Error al guardar. Verifica la conexión con Railway.");
         }
     } catch (error) {
-        console.error("❌ Error de conexión (Gasto):", error);
+        console.error("Error:", error);
+        alert("No se pudo conectar con el servidor.");
     }
-}
+});
 
-/**
- * Envía un ingreso a la base de datos MySQL en Railway
- */
-async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
-    const objetoIngreso = {
-        tipo: 'Ingreso Quincenal',
-        monto: monto,
-        clases: clases,
-        descripcion: descripcion || 'Sin descripción'
-    };
-
-    console.log("🚀 Enviando Ingreso a Railway...", objetoIngreso);
+// --- SECTOR 5: CARGA Y VISUALIZACIÓN ---
+async function cargarHistorial() {
+    const cuerpoTabla = document.getElementById("cuerpo-historial");
 
     try {
-        const respuesta = await fetch(`${URL_BASE}/guardar-ingreso`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(objetoIngreso)
-        });
-        
-        if (respuesta.ok) {
-            console.log("✅ Ingreso guardado con éxito");
-            alert("¡Ingreso guardado con éxito en la nube!");
-        } else {
-            const errorData = await respuesta.json();
-            console.error("❌ Error del servidor:", errorData);
-        }
-    } catch (error) {
-        console.error("❌ Error de conexión (Ingreso):", error);
-    }
-}
+        // Llamamos a la ruta de obtener-gastos que configuramos en App.py
+        const respuesta = await fetch(`${API_URL}/obtener-gastos`);
+        const gastos = await respuesta.json();
 
-// ================================================
-// SECCIÓN 5: Activación de Botones (Final)
-// ================================================
+        // Limpiamos la tabla antes de llenarla
+        cuerpoTabla.innerHTML = "";
 
-// 1. LADO IZQUIERDO: Botón Guardar (Ingresos)
-if (botonGuardar) {
-    botonGuardar.addEventListener("click", function() {
-        const sueldoVal = parseFloat(inputCop.value) || 0;
-        const clasesVal = parseInt(inputClases.value) || 0;
-        
-        // CORRECCIÓN: Se usa "desc-ingresos" para coincidir con el ID de tu Main.html
-        const descInput = document.getElementById("desc-ingresos");
-        const descVal = descInput ? descInput.value : "Sueldo Quincenal";
-
-        if (sueldoVal <= 0) {
-            alert("Por favor, ingresa un sueldo válido.");
+        if (gastos.length === 0) {
+            cuerpoTabla.innerHTML = `<tr><td colspan="4" class="texto-centrado">No hay registros aún.</td></tr>`;
             return;
         }
 
-        // Ejecutar el envío al servidor global
-        guardarIngresoEnBaseDeDatos(sueldoVal, clasesVal, descVal);
-    });
+        // Creamos las filas dinámicamente
+        gastos.forEach(gasto => {
+            const fila = document.createElement("tr");
+            fila.innerHTML = `
+                <td>${gasto.fecha}</td>
+                <td>${gasto.nombre}</td>
+                <td>$${parseFloat(gasto.valor).toLocaleString()}</td>
+                <td><span class="badge ${gasto.prioridad.toLowerCase()}">${gasto.prioridad}</span></td>
+            `;
+            cuerpoTabla.appendChild(fila);
+        });
+
+    } catch (error) {
+        console.error("Error al cargar historial:", error);
+    }
 }
 
-// 2. LADO DERECHO: Botón Calcular Gastos (Gastos)
-if (botonCalcularGastos) {
-    botonCalcularGastos.addEventListener("click", function() {
-        const nombreGasto = descGasto.value;
-        const montoGasto = parseFloat(valorGastoReal.value);
-        const fechaSeleccionada = fechaGastoReal.value; // Captura el valor del input tipo date
-
-        // Validación antes de enviar
-        if (!nombreGasto || isNaN(montoGasto) || montoGasto <= 0 || !fechaSeleccionada) {
-            alert("Por favor, completa el nombre, valor y fecha del gasto.");
-            return;
-        }
-
-        // Ejecutar el envío al servidor global incluyendo la fecha
-        guardarGastoEnBaseDeDatos(nombreGasto, montoGasto, fechaSeleccionada);
-    });
-}
+// EJECUCIÓN AUTOMÁTICA: Cargar datos apenas se abra la página
+document.addEventListener("DOMContentLoaded", cargarHistorial);
