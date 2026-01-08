@@ -143,10 +143,6 @@ def obtener_ingresos():
         if db and db.is_connected():
             db.close()
 
-if __name__ == '__main__':
-    # Railway requiere host='0.0.0.0' para ser visible externamente
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
 # ================================================================
 # LÓGICA DE NEGOCIO - DÍA 3
 # ================================================================
@@ -294,3 +290,7 @@ def eliminar_ingreso(id):
     finally:
         if db and db.is_connected():
             db.close()
+
+if __name__ == '__main__':
+    # Railway requiere host='0.0.0.0' para ser visible externamente
+    app.run(host='0.0.0.0', port=5000, debug=True)
