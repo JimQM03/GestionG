@@ -98,12 +98,15 @@ const descripcion = descGasto.value;
 
 // Si falta algún dato o el valor es 0, detenemos el proceso con un aviso
 if (valorGasto <=0 || descripcion === "" || fechaSeleccionada === ""){
-    alert("Por favor, completa la descripcion, valor y fecha para registrar el gasto");
+    mostrarNotificacion("Porfavor, completa todos los campos", "error");
     return
 }
 
 // Guardamos en el historial pasando los 3 datos necesarios
 guardarEnHistorial(valorGasto, descripcion, fechaSeleccionada);
+
+// Enviamos el gasto a MySQL / Railway automáticamente
+guardarGastoEnBaseDeDatos(descripcion, valorGasto);
 
 // Restar del sueldo en pantalla
 let sueldoActual = parseFloat(displaySueldo.textContent.replace(/\./g, '')) || 0;
@@ -114,17 +117,11 @@ displaySueldo.textContent = nuevoSueldo.toLocaleString('es-CO');
 displaySueldo.style.color = "#dc3545"; 
 setTimeout(() => { displaySueldo.style.color = "";}, 500);
 
-// --- Limpieza de Gastos Variables ---
-gastoCompras.value = "";
-gastoAntojos.value = "";
-
-// --- Limpieza de Deudas ---
-deudaCorto.value = "";
-deudaLargo.value = "";
-
-valorGastoReal.value = "";
-fechaGastoReal.value = "";
-descGasto.value = "";
+// --- Limpieza de inputs ---
+    [valorGastoReal, fechaGastoReal, descGasto, gastoCompras, gastoAntojos, deudaCorto, deudaLargo].forEach(input => {
+        if(input) input.value="";
+    });
+    mostrarNotificacion("Gasto registrado con éxito", "success");
 });
 
 
@@ -133,17 +130,22 @@ descGasto.value = "";
 //==========================================================================
 
 botonBorrarHistorial.addEventListener("click", () => {
-    // 1. Confirmación 
-    if (confirm("¿Estás seguro de que quieres borrar todo el historial?")) {
-        
-        // 2. Limpiar la memoria del navegador
-        localStorage.removeItem("historialGastos");
+    const modal = document.getElementById("custom-modal");
+    modal.classList.remove("modal-hidden"); // Quitamos la clase que lo esconde 
+});
 
-        // 3. renderizar
-        renderizarHistorial();
-        
-        alert("Historial borrado con éxito ");
-    }
+// Lógica del botón "Confirmar" dentro del Modal
+document.getElementById("modal-confirmar").addEventListener("click", () =>{
+    localStorage.removeItem("historialGastos") // Borramos datos
+    renderizarHistorial(); // Actualizamos tabla
+    document.getElementById("custom-modal").classList.add("modal-hidden");// Cerramos modal
+    mostrarNotificacion("Todo el historial ha sido borrado", "success");
+});
+
+//Lógica del botón "Cancelar" dentro del Modal
+document.getElementById("modal-cancel").addEventListener("click", () => {
+    document.getElementById("custom-modal").classList.add("modal-hidden"); // Solo cerramos
+
 });
 
 function guardarEnHistorial(total, descripcion, fecha) {
@@ -185,11 +187,11 @@ function renderizarHistorial() {
     historial.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
     // Usamos .reduce para sumar todos los "monto" que hay en el historial
-    const sumaTotal = historial.reduce((acumulado, registro) => acumulado + registro.monto, 0);
+    const sumaTotal = historial.reduce((acc, reg) => acc + reg.monto, 0);
 
     // 3. Construimos el HTML detallado
     let html = "";
-    historial.forEach((registro, index) => {
+    historial.forEach((registro) => {
         html += `
             <tr>
                 <td>${registro.fecha}</td>
@@ -202,10 +204,7 @@ function renderizarHistorial() {
     cuerpoHistorial.innerHTML = html;
 
     // Si tienes un elemento para el total, lo actualizamos con la suma
-    const elementoTotal = document.getElementById("total-gastado");
-    if (elementoTotal){
-        elementoTotal.textContent = "$" + sumaTotal.toLocaleString("es-CO");
-    }
+    if(totalElem) totalElem.textContent = "$" + sumaTotal.toLocaleString("es-CO");
 }
 
 //==========================================================================
@@ -249,20 +248,42 @@ function renderizarHistorial() {
     if (botonExportar){
         botonExportar.addEventListener("click", exportarHistorial);
     }
+// ================================================
+// SECTOR 3.5: Funcionalidad de Notificaciones
+// ================================================
+function mostrarNotificacion(mensaje, tipo = "success") {
+    const contenedor = document.getElementById("notificacion-container");
+    const texto = document.getElementById("notificacion-mensaje");
+    
+    if (!contenedor || !texto) {
+        console.warn("No se encontraron los elementos de notificación, usando alert.");
+        alert(mensaje);
+        return;
+    }
 
-// --- SECTOR 4: COMUNICACIÓN DE SUBIDA ---
+    texto.textContent = mensaje;
+    contenedor.className = `notificacion-${tipo}`;
+    contenedor.classList.remove("notificacion-hidden");
+
+    setTimeout(() => {
+        contenedor.classList.add("notificacion-hidden");
+    }, 3000);
+}
+
+// ================================================
+// SECTOR 4: Conexión al Backend (Railway)
+// ================================================
 const btnCalcular = document.getElementById("btn-calcular");
 
 btnCalcular.addEventListener("click", async () => {
-    // 1. Recolectar datos con IDs exactos de tu Main.html
+    // Recolectar datos
     const nombre = document.getElementById("desc-gasto").value;
     const valor = document.getElementById("valor-gasto-real").value;
     const prioridad = document.getElementById("prioridad-gasto").value;
     const fecha = document.getElementById("fecha-gasto-real").value;
 
-    // 2. Validación
     if (!nombre || !valor || !fecha) {
-        alert("Por favor, completa los campos de descripción, valor y fecha.");
+        mostrarNotificacion("Por favor, completa descripción, valor y fecha.", "error");
         return;
     }
 
@@ -282,32 +303,34 @@ btnCalcular.addEventListener("click", async () => {
         });
 
         if (respuesta.ok) {
-            alert("✅ Gasto guardado en MySQL correctamente.");
-            // Limpiar campos
+            console.log("✅ Gasto guardado con éxito");
+            mostrarNotificacion("¡Gasto guardado con éxito en la nube!", "success");
+            
+            // Limpiar campos y refrescar tabla
             document.getElementById("desc-gasto").value = "";
             document.getElementById("valor-gasto-real").value = "";
-            
-            // Actualizar la tabla inmediatamente después de guardar
             cargarHistorial(); 
         } else {
-            alert("❌ Error al guardar. Verifica la conexión con Railway.");
+            mostrarNotificacion("Error al guardar en el servidor", "error");
         }
     } catch (error) {
-        console.error("Error:", error);
-        alert("No se pudo conectar con el servidor.");
+        console.error("❌ Error de conexión:", error);
+        mostrarNotificacion("Sin conexión al servidor de Python", "error");
     }
 });
 
-// --- SECTOR 5: CARGA Y VISUALIZACIÓN ---
+// ================================================
+// SECTOR 5: Carga de Historial desde MySQL
+// ================================================
 async function cargarHistorial() {
     const cuerpoTabla = document.getElementById("cuerpo-historial");
+    if (!cuerpoTabla) return;
 
     try {
-        // Llamamos a la ruta de obtener-gastos que configuramos en App.py
         const respuesta = await fetch(`${API_URL}/obtener-gastos`);
+        if (!respuesta.ok) throw new Error("Error al obtener datos");
+        
         const gastos = await respuesta.json();
-
-        // Limpiamos la tabla antes de llenarla
         cuerpoTabla.innerHTML = "";
 
         if (gastos.length === 0) {
@@ -315,7 +338,6 @@ async function cargarHistorial() {
             return;
         }
 
-        // Creamos las filas dinámicamente
         gastos.forEach(gasto => {
             const fila = document.createElement("tr");
             fila.innerHTML = `
@@ -332,5 +354,5 @@ async function cargarHistorial() {
     }
 }
 
-// EJECUCIÓN AUTOMÁTICA: Cargar datos apenas se abra la página
+// Carga inicial
 document.addEventListener("DOMContentLoaded", cargarHistorial);
