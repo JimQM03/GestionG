@@ -1,4 +1,11 @@
 // ================================================
+// SECCIÓN 0: Configuración de API
+// ================================================
+
+// IMPORTANTE: Reemplaza esta URL con la URL de tu backend en Railway
+const API_URL = "gestiong-production.up.railway.app"; // <--- CAMBIA ESTO por tu URL real
+
+// ================================================
 // SECCIÓN 1: Referencias a elementos del DOM
 // ================================================
 
@@ -267,7 +274,36 @@ function renderizarHistorial() {
         botonExportar.addEventListener("click", exportarHistorial);
     }
 // ================================================
-// SECTOR 3.5: Funcionalidad de Notificaciones
+// SECTOR 3.5: Función para guardar en Base de Datos
+// ================================================
+async function guardarGastoEnBaseDeDatos(descripcion, valor) {
+    try {
+        const datosGasto = {
+            tipo: "Gasto General",
+            nombre: descripcion,
+            valor: parseFloat(valor),
+            prioridad: "Media", // Valor por defecto
+            fecha: new Date().toISOString().split('T')[0]
+        };
+
+        const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datosGasto)
+        });
+
+        if (respuesta.ok) {
+            console.log("✅ Gasto guardado en la base de datos");
+        } else {
+            console.error("Error al guardar en BD:", await respuesta.text());
+        }
+    } catch (error) {
+        console.error("Error al conectar con la base de datos:", error);
+    }
+}
+
+// ================================================
+// SECTOR 3.6: Funcionalidad de Notificaciones
 // ================================================
 function mostrarNotificacion(mensaje, tipo = "success") {
     const contenedor = document.getElementById("notificacion-container");
