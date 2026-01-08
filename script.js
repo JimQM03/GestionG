@@ -1,4 +1,11 @@
 // ================================================
+// SECCIÓN 0: Configuración de API
+// ================================================
+
+// IMPORTANTE: Reemplaza esta URL con la URL de tu backend en Railway
+const API_URL = "gestiong-production.up.railway.app"; // <--- CAMBIA ESTO por tu URL real
+
+// ================================================
 // SECCIÓN 1: Referencias a elementos del DOM
 // ================================================
 
@@ -129,24 +136,37 @@ setTimeout(() => { displaySueldo.style.color = "";}, 500);
 // Funcionalidad de historial y modal
 //==========================================================================
 
-botonBorrarHistorial.addEventListener("click", () => {
-    const modal = document.getElementById("custom-modal");
-    modal.classList.remove("modal-hidden"); // Quitamos la clase que lo esconde 
-});
+// CORRECCIÓN 1: Verificar que el botón existe antes de agregar el listener
+if (botonBorrarHistorial) {
+    botonBorrarHistorial.addEventListener("click", () => {
+        const modal = document.getElementById("custom-modal");
+        if (modal) {
+            modal.classList.remove("modal-hidden"); // Quitamos la clase que lo esconde 
+        }
+    });
+}
 
 // Lógica del botón "Confirmar" dentro del Modal
-document.getElementById("modal-confirmar").addEventListener("click", () =>{
-    localStorage.removeItem("historialGastos") // Borramos datos
-    renderizarHistorial(); // Actualizamos tabla
-    document.getElementById("custom-modal").classList.add("modal-hidden");// Cerramos modal
-    mostrarNotificacion("Todo el historial ha sido borrado", "success");
-});
+const modalConfirmar = document.getElementById("modal-confirmar");
+if (modalConfirmar) {
+    modalConfirmar.addEventListener("click", () =>{
+        localStorage.removeItem("historialGastos") // Borramos datos
+        renderizarHistorial(); // Actualizamos tabla
+        const modal = document.getElementById("custom-modal");
+        if (modal) {
+            modal.classList.add("modal-hidden");// Cerramos modal
+        }
+        mostrarNotificacion("Todo el historial ha sido borrado", "success");
+    });
+}
 
 //Lógica del botón "Cancelar" dentro del Modal
+
 document.getElementById("modal-cancelar").addEventListener("click", () => {
     document.getElementById("custom-modal").classList.add("modal-hidden"); // Solo cerramos
 
 });
+
 
 function guardarEnHistorial(total, descripcion, fecha) {
     // 1. Intentamos traer lo que ya existe en el historial. 
@@ -171,13 +191,15 @@ function guardarEnHistorial(total, descripcion, fecha) {
 }
 
 function renderizarHistorial() {
+    // CORRECCIÓN 2: Mover totalElem al inicio de la función
+    const totalElem = document.getElementById("total-gastado");
+    
     // 1. Traemos los datos y los convertimos de texto a Lista (Array)
     const historial = JSON.parse(localStorage.getItem("historialGastos")) || [];
 
     // 2. Si no hay nada, mostramos el mensaje por defecto
     if (historial.length === 0) {
         cuerpoHistorial.innerHTML = `<tr><td colspan="3" style="text-align: center;">Aún no hay registros.</td></tr>`;
-        const totalElem = document.getElementById("total-gastado") 
         // Si borras el historial, el contador de "Total" debe volver a cero
         if (totalElem) totalElem.textContent = "$0";
         return;
@@ -248,140 +270,140 @@ function renderizarHistorial() {
     if (botonExportar){
         botonExportar.addEventListener("click", exportarHistorial);
     }
+// ================================================
+// SECTOR 3.5: Función para guardar en Base de Datos
+// ================================================
+async function guardarGastoEnBaseDeDatos(descripcion, valor) {
+    try {
+        const datosGasto = {
+            tipo: "Gasto General",
+            nombre: descripcion,
+            valor: parseFloat(valor),
+            prioridad: "Media", // Valor por defecto
+            fecha: new Date().toISOString().split('T')[0]
+        };
+
+        const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datosGasto)
+        });
+
+        if (respuesta.ok) {
+            console.log("✅ Gasto guardado en la base de datos");
+        } else {
+            console.error("Error al guardar en BD:", await respuesta.text());
+        }
+    } catch (error) {
+        console.error("Error al conectar con la base de datos:", error);
+    }
+}
 
 // ================================================
-// Funcionalidad Notificaciones
+// SECTOR 3.6: Funcionalidad de Notificaciones
 // ================================================
-
-/* Función para mostrar notificaciones elegantes */
-function mostrarNotificacion(mensaje, tipo = "success"){
+function mostrarNotificacion(mensaje, tipo = "success") {
     const contenedor = document.getElementById("notificacion-container");
     const texto = document.getElementById("notificacion-mensaje");
     
-    if(!contenedor || !texto) return; // Seguridad por si no existen los elementos
-    texto.textContent = mensaje;
-    contenedor.className = `notificacion-${tipo}`;// Cambia color según éxito o error
+    if (!contenedor || !texto) {
+        console.warn("No se encontraron los elementos de notificación, usando alert.");
+        alert(mensaje);
+        return;
+    }
 
-    // Aparece
+    texto.textContent = mensaje;
+    contenedor.className = `notificacion-${tipo}`;
     contenedor.classList.remove("notificacion-hidden");
 
-    // Desaparece despues de 3 segundos
     setTimeout(() => {
         contenedor.classList.add("notificacion-hidden");
     }, 3000);
 }
 
 // ================================================
-// SECCIÓN 4: Conexión al Backend Global (Railway)
+// SECTOR 4: Conexión y Guardado
 // ================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const btnCalcular = document.getElementById("btn-calcular");
 
-// Esta es la URL pública de tu servicio Python en Railway
-const URL_BASE = "https://gestiong-production.up.railway.app";
+    if (btnCalcular) {
+        btnCalcular.addEventListener("click", async () => {
+            const desc = document.getElementById("desc-gasto")?.value;
+            const valor = document.getElementById("valor-gasto-real")?.value;
+            const prioridad = document.getElementById("prioridad-gasto")?.value;
+            const fecha = document.getElementById("fecha-gasto-real")?.value;
 
-/**
- * Envía un gasto a la base de datos MySQL en Railway
- */
-async function guardarGastoEnBaseDeDatos(nombre, valor, fecha, prioridad = 'Alta') {
-    const objetoGasto = {
-        tipo: 'Gasto General',
-        nombre: nombre,
-        valor: valor,
-        prioridad: prioridad,
-        fecha: fecha // Se envía la fecha seleccionada en el calendario
-    };
+            if (!desc || !valor || !fecha) {
+                alert("Por favor, completa los campos obligatorios.");
+                return;
+            }
 
-    console.log("🚀 Enviando Gasto a Railway...", objetoGasto);
+            const datosGasto = {
+                tipo: "Gasto General",
+                nombre: desc,
+                valor: parseFloat(valor),
+                prioridad: prioridad,
+                fecha: fecha
+            };
+
+            try {
+                const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(datosGasto)
+                });
+
+                if (respuesta.ok) {
+                    alert("✅ Guardado en la nube");
+                    if(document.getElementById("desc-gasto")) document.getElementById("desc-gasto").value = "";
+                    if(document.getElementById("valor-gasto-real")) document.getElementById("valor-gasto-real").value = "";
+                    cargarHistorial(); 
+                }
+            } catch (error) {
+                console.error("Error al conectar con Railway:", error);
+            }
+        });
+    }
+
+    // Cargar historial al iniciar
+    cargarHistorial();
+});
+
+// ================================================
+// SECTOR 5: Carga de Historial Corregida
+// ================================================
+async function cargarHistorial() {
+    const cuerpoTabla = document.getElementById("cuerpo-historial");
+    const totalElem = document.getElementById("total-gastos"); // <--- IMPORTANTE: Asegúrate que este ID exista en tu HTML
+
+    if (!cuerpoTabla) return;
 
     try {
-        const respuesta = await fetch(`${URL_BASE}/guardar-gasto`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(objetoGasto)
+        const respuesta = await fetch(`${API_URL}/obtener-gastos`);
+        const gastos = await respuesta.json();
+
+        cuerpoTabla.innerHTML = "";
+        let sumaTotal = 0;
+
+        gastos.forEach(gasto => {
+            sumaTotal += parseFloat(gasto.valor);
+            const fila = document.createElement("tr");
+            fila.innerHTML = `
+                <td>${gasto.fecha}</td>
+                <td>${gasto.nombre}</td>
+                <td>$${parseFloat(gasto.valor).toLocaleString()}</td>
+                <td><span class="badge ${gasto.prioridad.toLowerCase()}">${gasto.prioridad}</span></td>
+            `;
+            cuerpoTabla.appendChild(fila);
         });
-        
-        if (respuesta.ok) {
-            console.log("✅ Gasto guardado con éxito");
-            mostrarNotificacion("¡Gasto guardado con éxito en la nube!", "success");
-        } else {
-            const errorData = await respuesta.json();
-            console.error("❌ Error del servidor:", errorData);
+
+        // Solo intentamos escribir el total si el elemento existe en el HTML
+        if (totalElem) {
+            totalElem.textContent = sumaTotal.toLocaleString();
         }
+
     } catch (error) {
-        console.error("❌ Error de conexión (Gasto):", error);
-        mostrarNotificacion("Sin conexión al servidor de Python", "error");
+        console.error("Error al cargar historial:", error);
     }
-}
-
-/**
- * Envía un ingreso a la base de datos MySQL en Railway
- */
-async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
-    const objetoIngreso = {
-        tipo: 'Ingreso Quincenal',
-        monto: monto,
-        clases: clases,
-        descripcion: descripcion || 'Sin descripción'
-    };
-
-    console.log("🚀 Enviando Ingreso a Railway...", objetoIngreso);
-
-    try {
-        const respuesta = await fetch(`${URL_BASE}/guardar-ingreso`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(objetoIngreso)
-        });
-        
-        if (respuesta.ok) {
-            console.log("✅ Ingreso guardado con éxito");
-            alert("¡Ingreso guardado con éxito en la nube!");
-        } else {
-            const errorData = await respuesta.json();
-            console.error("❌ Error del servidor:", errorData);
-        }
-    } catch (error) {
-        console.error("❌ Error de conexión (Ingreso):", error);
-    }
-}
-
-// ================================================
-// SECCIÓN 5: Activación de Botones (Final)
-// ================================================
-
-// 1. LADO IZQUIERDO: Botón Guardar (Ingresos)
-if (botonGuardar) {
-    botonGuardar.addEventListener("click", function() {
-        const sueldoVal = parseFloat(inputCop.value) || 0;
-        const clasesVal = parseInt(inputClases.value) || 0;
-        
-        // CORRECCIÓN: Se usa "desc-ingresos" para coincidir con el ID de tu Main.html
-        const descInput = document.getElementById("desc-ingresos");
-        const descVal = descInput ? descInput.value : "Sueldo Quincenal";
-
-        if (sueldoVal <= 0) {
-            alert("Por favor, ingresa un sueldo válido.");
-            return;
-        }
-
-        // Ejecutar el envío al servidor global
-        guardarIngresoEnBaseDeDatos(sueldoVal, clasesVal, descVal);
-    });
-}
-
-// 2. LADO DERECHO: Botón Calcular Gastos (Gastos)
-if (botonCalcularGastos) {
-    botonCalcularGastos.addEventListener("click", function() {
-        const nombreGasto = descGasto.value;
-        const montoGasto = parseFloat(valorGastoReal.value);
-        const fechaSeleccionada = fechaGastoReal.value; // Captura el valor del input tipo date
-
-        // Validación antes de enviar
-        if (!nombreGasto || isNaN(montoGasto) || montoGasto <= 0 || !fechaSeleccionada) {
-            alert("Por favor, completa el nombre, valor y fecha del gasto.");
-            return;
-        }
-
-        // Ejecutar el envío al servidor global incluyendo la fecha
-        guardarGastoEnBaseDeDatos(nombreGasto, montoGasto, fechaSeleccionada);
-    });
 }
