@@ -2,8 +2,8 @@
 // SECCIÓN 0: Configuración de API
 // ================================================
 
-// IMPORTANTE: Reemplaza esta URL con la URL de tu backend en Railway
-const API_URL = "gestiong-production.up.railway.app"; // <--- CAMBIA ESTO por tu URL real
+// URL de tu backend en Railway
+const API_URL = "https://gestiong-production.up.railway.app";
 
 // ================================================
 // SECCIÓN 1: Referencias a elementos del DOM
@@ -273,6 +273,7 @@ function renderizarHistorial() {
     if (botonExportar){
         botonExportar.addEventListener("click", exportarHistorial);
     }
+
 // ================================================
 // SECTOR 3.5: Función para guardar en Base de Datos
 // ================================================
