@@ -32,7 +32,7 @@ const displayValorClase = document.getElementById("valor-clase");
 // Selectores para la tabla y descripcion
 const cuerpoHistorial = document.getElementById("cuerpo-historial");
 const descGasto = document.getElementById("desc-gasto");
-const fechaGastoReal = document.getElementById("fecha-gasto-real").value;
+const fechaGastoReal = document.getElementById("fecha-gasto-real");
 const valorGastoReal = document.getElementById("valor-gasto-real");
 
 // Inputs de gastos variables
@@ -129,24 +129,40 @@ setTimeout(() => { displaySueldo.style.color = "";}, 500);
 // Funcionalidad de historial
 //==========================================================================
 
-botonBorrarHistorial.addEventListener("click", () => {
-    const modal = document.getElementById("custom-modal");
-    modal.classList.remove("modal-hidden"); // Quitamos la clase que lo esconde 
-});
+// CORRECCIÓN 1: Verificar que el botón existe antes de agregar el listener
+if (botonBorrarHistorial) {
+    botonBorrarHistorial.addEventListener("click", () => {
+        const modal = document.getElementById("custom-modal");
+        if (modal) {
+            modal.classList.remove("modal-hidden"); // Quitamos la clase que lo esconde 
+        }
+    });
+}
 
 // Lógica del botón "Confirmar" dentro del Modal
-document.getElementById("modal-confirmar").addEventListener("click", () =>{
-    localStorage.removeItem("historialGastos") // Borramos datos
-    renderizarHistorial(); // Actualizamos tabla
-    document.getElementById("custom-modal").classList.add("modal-hidden");// Cerramos modal
-    mostrarNotificacion("Todo el historial ha sido borrado", "success");
-});
+const modalConfirmar = document.getElementById("modal-confirmar");
+if (modalConfirmar) {
+    modalConfirmar.addEventListener("click", () =>{
+        localStorage.removeItem("historialGastos") // Borramos datos
+        renderizarHistorial(); // Actualizamos tabla
+        const modal = document.getElementById("custom-modal");
+        if (modal) {
+            modal.classList.add("modal-hidden");// Cerramos modal
+        }
+        mostrarNotificacion("Todo el historial ha sido borrado", "success");
+    });
+}
 
 //Lógica del botón "Cancelar" dentro del Modal
-document.getElementById("modal-cancel").addEventListener("click", () => {
-    document.getElementById("custom-modal").classList.add("modal-hidden"); // Solo cerramos
-
-});
+const modalCancel = document.getElementById("modal-cancel");
+if (modalCancel) {
+    modalCancel.addEventListener("click", () => {
+        const modal = document.getElementById("custom-modal");
+        if (modal) {
+            modal.classList.add("modal-hidden"); // Solo cerramos
+        }
+    });
+}
 
 function guardarEnHistorial(total, descripcion, fecha) {
     // 1. Intentamos traer lo que ya existe en el historial. 
@@ -171,13 +187,15 @@ function guardarEnHistorial(total, descripcion, fecha) {
 }
 
 function renderizarHistorial() {
+    // CORRECCIÓN 2: Mover totalElem al inicio de la función
+    const totalElem = document.getElementById("total-gastado");
+    
     // 1. Traemos los datos y los convertimos de texto a Lista (Array)
     const historial = JSON.parse(localStorage.getItem("historialGastos")) || [];
 
     // 2. Si no hay nada, mostramos el mensaje por defecto
     if (historial.length === 0) {
         cuerpoHistorial.innerHTML = `<tr><td colspan="3" style="text-align: center;">Aún no hay registros.</td></tr>`;
-        const totalElem = document.getElementById("total-gastado") 
         // Si borras el historial, el contador de "Total" debe volver a cero
         if (totalElem) totalElem.textContent = "$0";
         return;
@@ -271,31 +289,26 @@ function mostrarNotificacion(mensaje, tipo = "success") {
 }
 
 // ================================================
-// SECCIÓN 4: Conexión al Backend (Guardado)
+// SECTOR 4: Conexión y Guardado
 // ================================================
-
-// Usamos DOMContentLoaded para evitar el error "Cannot read properties of null"
 document.addEventListener("DOMContentLoaded", () => {
     const btnCalcular = document.getElementById("btn-calcular");
 
-    // Verificamos que el botón exista antes de asignarle el evento
     if (btnCalcular) {
         btnCalcular.addEventListener("click", async () => {
-            // 1. Recolectar datos con IDs exactos de tu Main.html
-            const nombre = document.getElementById("desc-gasto").value;
-            const valor = document.getElementById("valor-gasto-real").value;
-            const prioridad = document.getElementById("prioridad-gasto").value;
-            const fecha = document.getElementById("fecha-gasto-real").value;
+            const desc = document.getElementById("desc-gasto")?.value;
+            const valor = document.getElementById("valor-gasto-real")?.value;
+            const prioridad = document.getElementById("prioridad-gasto")?.value;
+            const fecha = document.getElementById("fecha-gasto-real")?.value;
 
-            // 2. Validación básica
-            if (!nombre || !valor || !fecha) {
-                mostrarNotificacion("Por favor, completa descripción, valor y fecha.", "error");
+            if (!desc || !valor || !fecha) {
+                alert("Por favor, completa los campos obligatorios.");
                 return;
             }
 
             const datosGasto = {
                 tipo: "Gasto General",
-                nombre: nombre,
+                nombre: desc,
                 valor: parseFloat(valor),
                 prioridad: prioridad,
                 fecha: fecha
@@ -309,55 +322,39 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 if (respuesta.ok) {
-                    mostrarNotificacion("¡Gasto guardado con éxito en la nube!", "success");
-                    
-                    // Limpiar campos
-                    document.getElementById("desc-gasto").value = "";
-                    document.getElementById("valor-gasto-real").value = "";
-                    
-                    // Actualizar la tabla inmediatamente
+                    alert("✅ Guardado en la nube");
+                    if(document.getElementById("desc-gasto")) document.getElementById("desc-gasto").value = "";
+                    if(document.getElementById("valor-gasto-real")) document.getElementById("valor-gasto-real").value = "";
                     cargarHistorial(); 
-                } else {
-                    mostrarNotificacion("Error al guardar en el servidor", "error");
                 }
             } catch (error) {
-                console.error("❌ Error de conexión:", error);
-                mostrarNotificacion("Sin conexión al servidor de Railway", "error");
+                console.error("Error al conectar con Railway:", error);
             }
         });
-    } else {
-        console.warn("Aviso: No se encontró el botón 'btn-calcular' en esta página.");
     }
 
-    // Al cargar la página, también traemos el historial
+    // Cargar historial al iniciar
     cargarHistorial();
 });
 
 // ================================================
-// SECCIÓN 5: Carga de Historial desde MySQL (Lectura)
+// SECTOR 5: Carga de Historial Corregida
 // ================================================
 async function cargarHistorial() {
     const cuerpoTabla = document.getElementById("cuerpo-historial");
-    
-    // Si no estamos en la página que tiene la tabla, no hacemos nada
+    const totalElem = document.getElementById("total-gastos"); // <--- IMPORTANTE: Asegúrate que este ID exista en tu HTML
+
     if (!cuerpoTabla) return;
 
     try {
         const respuesta = await fetch(`${API_URL}/obtener-gastos`);
-        if (!respuesta.ok) throw new Error("Error al obtener datos");
-        
         const gastos = await respuesta.json();
 
-        // Limpiamos la tabla antes de llenarla
         cuerpoTabla.innerHTML = "";
+        let sumaTotal = 0;
 
-        if (gastos.length === 0) {
-            cuerpoTabla.innerHTML = `<tr><td colspan="4" class="texto-centrado">No hay registros aún.</td></tr>`;
-            return;
-        }
-
-        // Creamos las filas dinámicamente
         gastos.forEach(gasto => {
+            sumaTotal += parseFloat(gasto.valor);
             const fila = document.createElement("tr");
             fila.innerHTML = `
                 <td>${gasto.fecha}</td>
@@ -368,7 +365,12 @@ async function cargarHistorial() {
             cuerpoTabla.appendChild(fila);
         });
 
+        // Solo intentamos escribir el total si el elemento existe en el HTML
+        if (totalElem) {
+            totalElem.textContent = sumaTotal.toLocaleString();
+        }
+
     } catch (error) {
         console.error("Error al cargar historial:", error);
     }
-}// Prueba de subida 123
+}
