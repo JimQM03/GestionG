@@ -62,14 +62,15 @@ const botonBorrarHistorial = document.getElementById("botonBorrarHistorial");
 // SECCIÓN 2: Funcionalidad de ingresos
 // ================================================
 
-botonGuardar.addEventListener("click", () => {
+botonGuardar.addEventListener("click", async () => {
     // Agarramos lo que el usuario escribió
     const sueldoTotal = parseFloat(inputCop.value) || 0;
     const clases = parseInt(inputClases.value) || 0;
+    const descripcionIngreso = document.getElementById("desc-ingreso")?.value || "";
 
     // Validación básica para no dividir entre cero
     if (clases === 0) {
-        alert("Ponle al menos 1 clase para calcular el valor");
+        mostrarNotificacion("Ponle al menos 1 clase para calcular", "error");
         return;
     }
 
@@ -82,11 +83,18 @@ botonGuardar.addEventListener("click", () => {
     displayAhorro.textContent = ahorro.toLocaleString('es-CO');
     displayValorClase.textContent = pagoPorClase.toLocaleString('es-CO');
 
+    // Guardar en la base de datos
+    await guardarIngresoEnBaseDeDatos(sueldoTotal, clases, descripcionIngreso);
+
+    // Sincronizar el saldo real desde MySQL
+    await obtenerSaldoGlobal();
     // Limpiamos para la próxima
     inputCop.value = "";
     inputClases.value = "";
+    if(document.getElementById("desc-ingreso")) document.getElementById("desc-ingreso").value = "";
 
     console.log("Ingreso guardado correctamente.")
+    mostrarNotificacion("Ingreso registro con éxito", "success");
 });
 
 
@@ -97,7 +105,7 @@ botonGuardar.addEventListener("click", () => {
 // 1. Esto hace que al abrir la página, los datos guardados aparezcan solos
 document.addEventListener("DOMContentLoaded", renderizarHistorial);
 
-botonCalcularGastos.addEventListener("click", () => {
+botonCalcularGastos.addEventListener("click", async () => {
 // Extraemos los valores de los inputs
 const valorGasto = parseFloat(valorGastoReal.value) || 0;
 const fechaSeleccionada = fechaGastoReal.value;
@@ -124,6 +132,11 @@ displaySueldo.textContent = nuevoSueldo.toLocaleString('es-CO');
 displaySueldo.style.color = "#dc3545"; 
 setTimeout(() => { displaySueldo.style.color = "";}, 500);
 
+guardarEnHistorial(valorGasto, descripcion, fechaSeleccionada);
+await guardarGastoEnBaseDeDatos(descripcion, valorGasto);
+
+await obtenerSaldoGlobal();
+await cargarHistorial();
 // --- Limpieza de inputs ---
     [valorGastoReal, fechaGastoReal, descGasto, gastoCompras, gastoAntojos, deudaCorto, deudaLargo].forEach(input => {
         if(input) input.value="";
@@ -281,7 +294,7 @@ async function guardarGastoEnBaseDeDatos(descripcion, valor) {
             nombre: descripcion,
             valor: parseFloat(valor),
             prioridad: "Media",
-            fecha: new Date().toISOString().split('T')[0]
+            fecha: fechaGastoReal.value || new Date().toISOString().split('T')[0]
         };
 
         const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
@@ -297,6 +310,31 @@ async function guardarGastoEnBaseDeDatos(descripcion, valor) {
         }
     } catch (error) {
         console.warn("⚠️ No se pudo conectar con el backend. Gasto guardado solo en localStorage.");
+    }
+}
+
+async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
+    try {
+        const datosIngreso = {
+            tipo: "Ingreso Quincenal",
+            monto: parseFloat(monto),
+            clases: parseInt(clases),
+            descripcion: descripcion || "Ingreso de clases"
+        };
+
+        const respuesta = await fetch(`${API_URL}/guardar-ingreso`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datosIngreso)
+        });
+
+        if (respuesta.ok) {
+            console.log("✅ Ingreso guardado en la base de datos");
+        } else {
+            console.warn(`⚠️ Backend respondió con error ${respuesta.status}.`);
+        }
+    } catch (error) {
+        console.warn("⚠️ No se pudo conectar con el backend para guardar el ingreso.");
     }
 }
 
@@ -326,7 +364,14 @@ function mostrarNotificacion(mensaje, tipo = "success") {
 // SECTOR 4: Conexión y Guardado
 // ================================================
 document.addEventListener("DOMContentLoaded", () => {
+    //Traer todo de la base de datos al arrancar
+    cargarHistorial();
+    obtenerSaldoGlobal();
     const btnCalcular = document.getElementById("btn-calcular");
+
+    // Cargar historial al iniciar
+    cargarHistorial();
+    obtenerSaldoGlobal(); 
 
     if (btnCalcular) {
         btnCalcular.addEventListener("click", async () => {
@@ -366,9 +411,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
-
-    // Cargar historial al iniciar
-    cargarHistorial();
 });
 
 // ================================================
@@ -420,5 +462,28 @@ async function cargarHistorial() {
     } catch (error) {
         console.warn("No se pudo conectar con el backend:", error.message);
         console.log("La aplicación funcionará con localStorage solamente.");
+    }
+}
+// ================================================
+// SECTOR 6: Sincronización de Saldo Real 
+// ================================================
+async function obtenerSaldoGlobal() {
+    try{
+        const res = await fetch(`${API_URL}/calcular-saldo`);
+        const data = await res.json();
+
+        if (data.status === "success"){
+            // Actualizamos los displays con la info real de MySQL
+            displaySueldo.textContent = data.saldo.toLocaleString('es-CO');
+            if(data.total_ingresos){
+                 // Calculamos el ahorro basado en el total de ingresos de la DB
+                const ahorroCalculado = data.total_ingresos*0.10;
+                displayAhorro.textContent = ahorroCalculado.toLocaleString('es-CO');
+            }
+           
+            console.log("Pantalla actualizada");
+        }
+    } catch (e){
+        console.error("Error al sincronizar saldo.", e);
     }
 }
