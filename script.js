@@ -371,4 +371,4 @@ async function cargarHistorial() {
     } catch (error) {
         console.error("Error al cargar historial:", error);
     }
-}
+}// Prueba de subida 123
