@@ -62,10 +62,11 @@ const botonBorrarHistorial = document.getElementById("botonBorrarHistorial");
 // SECCIÓN 2: Funcionalidad de ingresos
 // ================================================
 
-botonGuardar.addEventListener("click", () => {
+botonGuardar.addEventListener("click", async () => {
     // Agarramos lo que el usuario escribió
     const sueldoTotal = parseFloat(inputCop.value) || 0;
     const clases = parseInt(inputClases.value) || 0;
+    const descripcionIngreso = document.getElementById("desc-ingreso")?.value || "";
 
     // Validación básica para no dividir entre cero
     if (clases === 0) {
@@ -82,9 +83,13 @@ botonGuardar.addEventListener("click", () => {
     displayAhorro.textContent = ahorro.toLocaleString('es-CO');
     displayValorClase.textContent = pagoPorClase.toLocaleString('es-CO');
 
+    // Guardar en la base de datos
+    await guardarIngresoEnBaseDeDatos(sueldoTotal, clases, descripcionIngreso);
+
     // Limpiamos para la próxima
     inputCop.value = "";
     inputClases.value = "";
+    if(document.getElementById("desc-ingreso")) document.getElementById("desc-ingreso").value = "";
 
     console.log("Ingreso guardado correctamente.")
 });
@@ -300,6 +305,31 @@ async function guardarGastoEnBaseDeDatos(descripcion, valor) {
         }
     } catch (error) {
         console.warn("⚠️ No se pudo conectar con el backend. Gasto guardado solo en localStorage.");
+    }
+}
+
+async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
+    try {
+        const datosIngreso = {
+            tipo: "Ingreso Quincenal",
+            monto: parseFloat(monto),
+            clases: parseInt(clases),
+            descripcion: descripcion || "Ingreso de clases"
+        };
+
+        const respuesta = await fetch(`${API_URL}/guardar-ingreso`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datosIngreso)
+        });
+
+        if (respuesta.ok) {
+            console.log("✅ Ingreso guardado en la base de datos");
+        } else {
+            console.warn(`⚠️ Backend respondió con error ${respuesta.status}.`);
+        }
+    } catch (error) {
+        console.warn("⚠️ No se pudo conectar con el backend para guardar el ingreso.");
     }
 }
 

@@ -22,7 +22,11 @@ DB_CONFIG = {
 def home():
     return "<h1>Servidor GestionG Online</h1><p>El puerto 5000 está escuchando correctamente.</p>"
 
-# 1. RUTA PARA GUARDAR GASTOS
+# ================================================================
+# ENDPOINTS PARA GASTOS
+# ================================================================
+
+# 1. GUARDAR GASTO
 @app.route('/guardar-gasto', methods=['POST'])
 def guardar_gasto():
     db = None
@@ -39,8 +43,8 @@ def guardar_gasto():
             datos.get('tipo', 'Gasto General'),
             datos.get('nombre'),
             datos.get('valor'),
-            datos.get('prioridad', 'Alta'),
-            datos.get('fecha') # Dato vital enviado desde el JS
+            datos.get('prioridad', 'Media'),
+            datos.get('fecha')
         )
         
         cursor.execute(sql, valores)
@@ -49,21 +53,21 @@ def guardar_gasto():
         return jsonify({"status": "success", "mensaje": "Gasto guardado en MySQL"}), 200
     
     except Exception as e:
-        print(f"Error en gastos: {str(e)}")
+        print(f"Error en guardar gasto: {str(e)}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
         if db and db.is_connected():
             db.close()
 
-# 2. RUTA PARA OBTENER GASTOS (NUEVO)
+# 2. OBTENER TODOS LOS GASTOS
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
     db = None
     try:
         db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor(dictionary=True)  # dictionary=True para obtener resultados como dict
+        cursor = db.cursor(dictionary=True)
         
-        # Consulta para obtener todos los gastos
+        # Consulta para obtener todos los gastos ordenados por fecha
         sql = "SELECT * FROM gastos ORDER BY fecha DESC"
         cursor.execute(sql)
         gastos = cursor.fetchall()
@@ -78,7 +82,11 @@ def obtener_gastos():
         if db and db.is_connected():
             db.close()
 
-# 3. RUTA PARA GUARDAR INGRESOS
+# ================================================================
+# ENDPOINTS PARA INGRESOS
+# ================================================================
+
+# 3. GUARDAR INGRESO
 @app.route('/guardar-ingreso', methods=['POST'])
 def guardar_ingreso():
     db = None
@@ -87,15 +95,17 @@ def guardar_ingreso():
         db = mysql.connector.connect(**DB_CONFIG)
         cursor = db.cursor()
         
-        # SQL ajustado a tus columnas: tipo, monto, clases, descripcion
+        # SQL ajustado a tu tabla de ingresos
+        # Columnas: tipo, monto, clases, descripcion
+        # fecha_registro se genera automáticamente con CURRENT_TIMESTAMP
         sql = """INSERT INTO ingresos (tipo, monto, clases, descripcion) 
                  VALUES (%s, %s, %s, %s)"""
         
         valores = (
             datos.get('tipo', 'Ingreso Quincenal'),
             datos.get('monto'),
-            datos.get('clases'),
-            datos.get('descripcion')
+            datos.get('clases', 0),
+            datos.get('descripcion', '')
         )
         
         cursor.execute(sql, valores)
@@ -104,7 +114,30 @@ def guardar_ingreso():
         return jsonify({"status": "success", "mensaje": "Ingreso guardado en MySQL"}), 200
     
     except Exception as e:
-        print(f"Error en ingresos: {str(e)}")
+        print(f"Error en guardar ingreso: {str(e)}")
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        if db and db.is_connected():
+            db.close()
+
+# 4. OBTENER TODOS LOS INGRESOS
+@app.route('/obtener-ingresos', methods=['GET'])
+def obtener_ingresos():
+    db = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+        
+        # Consulta para obtener todos los ingresos ordenados por fecha de registro
+        sql = "SELECT * FROM ingresos ORDER BY fecha_registro DESC"
+        cursor.execute(sql)
+        ingresos = cursor.fetchall()
+        
+        cursor.close()
+        return jsonify(ingresos), 200
+    
+    except Exception as e:
+        print(f"Error al obtener ingresos: {str(e)}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
         if db and db.is_connected():
