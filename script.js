@@ -126,7 +126,7 @@ setTimeout(() => { displaySueldo.style.color = "";}, 500);
 
 
 //==========================================================================
-// Funcionalidad de historial
+// Funcionalidad de historial y modal
 //==========================================================================
 
 botonBorrarHistorial.addEventListener("click", () => {
@@ -143,7 +143,7 @@ document.getElementById("modal-confirmar").addEventListener("click", () =>{
 });
 
 //Lógica del botón "Cancelar" dentro del Modal
-document.getElementById("modal-cancel").addEventListener("click", () => {
+document.getElementById("modal-cancelar").addEventListener("click", () => {
     document.getElementById("custom-modal").classList.add("modal-hidden"); // Solo cerramos
 
 });
