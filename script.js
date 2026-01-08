@@ -117,22 +117,10 @@ if (valorGasto <=0 || descripcion === "" || fechaSeleccionada === ""){
     return
 }
 
-// Guardamos en el historial pasando los 3 datos necesarios
-guardarEnHistorial(valorGasto, descripcion, fechaSeleccionada);
-
-// Enviamos el gasto a MySQL / Railway automáticamente
-guardarGastoEnBaseDeDatos(descripcion, valorGasto);
-
-// Restar del sueldo en pantalla
-let sueldoActual = parseFloat(displaySueldo.textContent.replace(/\./g, '')) || 0;
-let nuevoSueldo = sueldoActual - valorGasto;
-displaySueldo.textContent = nuevoSueldo.toLocaleString('es-CO');
-
 // Resaltamos el sueldo en rojo brevemente para confirmar el descuento
 displaySueldo.style.color = "#dc3545"; 
 setTimeout(() => { displaySueldo.style.color = "";}, 500);
 
-guardarEnHistorial(valorGasto, descripcion, fechaSeleccionada);
 await guardarGastoEnBaseDeDatos(descripcion, valorGasto);
 
 await obtenerSaldoGlobal();
@@ -367,50 +355,6 @@ document.addEventListener("DOMContentLoaded", () => {
     //Traer todo de la base de datos al arrancar
     cargarHistorial();
     obtenerSaldoGlobal();
-    const btnCalcular = document.getElementById("btn-calcular");
-
-    // Cargar historial al iniciar
-    cargarHistorial();
-    obtenerSaldoGlobal(); 
-
-    if (btnCalcular) {
-        btnCalcular.addEventListener("click", async () => {
-            const desc = document.getElementById("desc-gasto")?.value;
-            const valor = document.getElementById("valor-gasto-real")?.value;
-            const prioridad = document.getElementById("prioridad-gasto")?.value;
-            const fecha = document.getElementById("fecha-gasto-real")?.value;
-
-            if (!desc || !valor || !fecha) {
-                alert("Por favor, completa los campos obligatorios.");
-                return;
-            }
-
-            const datosGasto = {
-                tipo: "Gasto General",
-                nombre: desc,
-                valor: parseFloat(valor),
-                prioridad: prioridad,
-                fecha: fecha
-            };
-
-            try {
-                const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(datosGasto)
-                });
-
-                if (respuesta.ok) {
-                    alert("✅ Guardado en la nube");
-                    if(document.getElementById("desc-gasto")) document.getElementById("desc-gasto").value = "";
-                    if(document.getElementById("valor-gasto-real")) document.getElementById("valor-gasto-real").value = "";
-                    cargarHistorial(); 
-                }
-            } catch (error) {
-                console.error("Error al conectar con Railway:", error);
-            }
-        });
-    }
 });
 
 // ================================================
