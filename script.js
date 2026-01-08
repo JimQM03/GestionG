@@ -271,59 +271,75 @@ function mostrarNotificacion(mensaje, tipo = "success") {
 }
 
 // ================================================
-// SECTOR 4: Conexión al Backend (Railway)
+// SECCIÓN 4: Conexión al Backend (Guardado)
 // ================================================
-const btnCalcular = document.getElementById("btn-calcular");
 
-btnCalcular.addEventListener("click", async () => {
-    // Recolectar datos
-    const nombre = document.getElementById("desc-gasto").value;
-    const valor = document.getElementById("valor-gasto-real").value;
-    const prioridad = document.getElementById("prioridad-gasto").value;
-    const fecha = document.getElementById("fecha-gasto-real").value;
+// Usamos DOMContentLoaded para evitar el error "Cannot read properties of null"
+document.addEventListener("DOMContentLoaded", () => {
+    const btnCalcular = document.getElementById("btn-calcular");
 
-    if (!nombre || !valor || !fecha) {
-        mostrarNotificacion("Por favor, completa descripción, valor y fecha.", "error");
-        return;
-    }
+    // Verificamos que el botón exista antes de asignarle el evento
+    if (btnCalcular) {
+        btnCalcular.addEventListener("click", async () => {
+            // 1. Recolectar datos con IDs exactos de tu Main.html
+            const nombre = document.getElementById("desc-gasto").value;
+            const valor = document.getElementById("valor-gasto-real").value;
+            const prioridad = document.getElementById("prioridad-gasto").value;
+            const fecha = document.getElementById("fecha-gasto-real").value;
 
-    const datosGasto = {
-        tipo: "Gasto General",
-        nombre: nombre,
-        valor: parseFloat(valor),
-        prioridad: prioridad,
-        fecha: fecha
-    };
+            // 2. Validación básica
+            if (!nombre || !valor || !fecha) {
+                mostrarNotificacion("Por favor, completa descripción, valor y fecha.", "error");
+                return;
+            }
 
-    try {
-        const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(datosGasto)
+            const datosGasto = {
+                tipo: "Gasto General",
+                nombre: nombre,
+                valor: parseFloat(valor),
+                prioridad: prioridad,
+                fecha: fecha
+            };
+
+            try {
+                const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(datosGasto)
+                });
+
+                if (respuesta.ok) {
+                    mostrarNotificacion("¡Gasto guardado con éxito en la nube!", "success");
+                    
+                    // Limpiar campos
+                    document.getElementById("desc-gasto").value = "";
+                    document.getElementById("valor-gasto-real").value = "";
+                    
+                    // Actualizar la tabla inmediatamente
+                    cargarHistorial(); 
+                } else {
+                    mostrarNotificacion("Error al guardar en el servidor", "error");
+                }
+            } catch (error) {
+                console.error("❌ Error de conexión:", error);
+                mostrarNotificacion("Sin conexión al servidor de Railway", "error");
+            }
         });
-
-        if (respuesta.ok) {
-            console.log("✅ Gasto guardado con éxito");
-            mostrarNotificacion("¡Gasto guardado con éxito en la nube!", "success");
-            
-            // Limpiar campos y refrescar tabla
-            document.getElementById("desc-gasto").value = "";
-            document.getElementById("valor-gasto-real").value = "";
-            cargarHistorial(); 
-        } else {
-            mostrarNotificacion("Error al guardar en el servidor", "error");
-        }
-    } catch (error) {
-        console.error("❌ Error de conexión:", error);
-        mostrarNotificacion("Sin conexión al servidor de Python", "error");
+    } else {
+        console.warn("Aviso: No se encontró el botón 'btn-calcular' en esta página.");
     }
+
+    // Al cargar la página, también traemos el historial
+    cargarHistorial();
 });
 
 // ================================================
-// SECTOR 5: Carga de Historial desde MySQL
+// SECCIÓN 5: Carga de Historial desde MySQL (Lectura)
 // ================================================
 async function cargarHistorial() {
     const cuerpoTabla = document.getElementById("cuerpo-historial");
+    
+    // Si no estamos en la página que tiene la tabla, no hacemos nada
     if (!cuerpoTabla) return;
 
     try {
@@ -331,6 +347,8 @@ async function cargarHistorial() {
         if (!respuesta.ok) throw new Error("Error al obtener datos");
         
         const gastos = await respuesta.json();
+
+        // Limpiamos la tabla antes de llenarla
         cuerpoTabla.innerHTML = "";
 
         if (gastos.length === 0) {
@@ -338,6 +356,7 @@ async function cargarHistorial() {
             return;
         }
 
+        // Creamos las filas dinámicamente
         gastos.forEach(gasto => {
             const fila = document.createElement("tr");
             fila.innerHTML = `
@@ -353,6 +372,3 @@ async function cargarHistorial() {
         console.error("Error al cargar historial:", error);
     }
 }
-
-// Carga inicial
-document.addEventListener("DOMContentLoaded", cargarHistorial);
