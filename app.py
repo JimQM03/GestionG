@@ -146,3 +146,151 @@ def obtener_ingresos():
 if __name__ == '__main__':
     # Railway requiere host='0.0.0.0' para ser visible externamente
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+# ================================================================
+# LÓGICA DE NEGOCIO - DÍA 3
+# ================================================================
+
+# 5. CALCULAR SALDO TOTAL (Ingresos - Gastos)
+@app.route('/calcular-saldo', methods=['GET'])
+def calcular_saldo():
+    db = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+        
+        # Calcular total de ingresos
+        cursor.execute("SELECT SUM(monto) as total_ingresos FROM ingresos")
+        resultado_ingresos = cursor.fetchone()
+        total_ingresos = float(resultado_ingresos['total_ingresos']) if resultado_ingresos['total_ingresos'] else 0
+        
+        # Calcular total de gastos
+        cursor.execute("SELECT SUM(valor) as total_gastos FROM gastos")
+        resultado_gastos = cursor.fetchone()
+        total_gastos = float(resultado_gastos['total_gastos']) if resultado_gastos['total_gastos'] else 0
+        
+        # Calcular saldo (lo que te queda)
+        saldo = total_ingresos - total_gastos
+        
+        cursor.close()
+        
+        return jsonify({
+            "status": "success",
+            "total_ingresos": total_ingresos,
+            "total_gastos": total_gastos,
+            "saldo": saldo
+        }), 200
+    
+    except Exception as e:
+        print(f"Error al calcular saldo: {str(e)}")
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        if db and db.is_connected():
+            db.close()
+
+# 6. ESTADÍSTICAS DETALLADAS
+@app.route('/estadisticas', methods=['GET'])
+def estadisticas():
+    db = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+        
+        # Total de ingresos
+        cursor.execute("SELECT SUM(monto) as total, COUNT(*) as cantidad FROM ingresos")
+        ingresos_data = cursor.fetchone()
+        
+        # Total de gastos
+        cursor.execute("SELECT SUM(valor) as total, COUNT(*) as cantidad FROM gastos")
+        gastos_data = cursor.fetchone()
+        
+        # Gastos por prioridad
+        cursor.execute("""
+            SELECT prioridad, SUM(valor) as total 
+            FROM gastos 
+            GROUP BY prioridad
+        """)
+        gastos_por_prioridad = cursor.fetchall()
+        
+        # Últimos 5 movimientos (combinando gastos e ingresos)
+        cursor.execute("""
+            SELECT 'Ingreso' as tipo, monto as valor, descripcion, fecha_registro as fecha 
+            FROM ingresos 
+            UNION ALL
+            SELECT 'Gasto' as tipo, valor, nombre as descripcion, fecha 
+            FROM gastos 
+            ORDER BY fecha DESC 
+            LIMIT 5
+        """)
+        ultimos_movimientos = cursor.fetchall()
+        
+        cursor.close()
+        
+        total_ingresos = float(ingresos_data['total']) if ingresos_data['total'] else 0
+        total_gastos = float(gastos_data['total']) if gastos_data['total'] else 0
+        
+        return jsonify({
+            "status": "success",
+            "ingresos": {
+                "total": total_ingresos,
+                "cantidad": ingresos_data['cantidad']
+            },
+            "gastos": {
+                "total": total_gastos,
+                "cantidad": gastos_data['cantidad']
+            },
+            "saldo": total_ingresos - total_gastos,
+            "gastos_por_prioridad": gastos_por_prioridad,
+            "ultimos_movimientos": ultimos_movimientos
+        }), 200
+    
+    except Exception as e:
+        print(f"Error al obtener estadísticas: {str(e)}")
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        if db and db.is_connected():
+            db.close()
+
+# 7. ELIMINAR GASTO
+@app.route('/eliminar-gasto/<int:id>', methods=['DELETE'])
+def eliminar_gasto(id):
+    db = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor()
+        
+        sql = "DELETE FROM gastos WHERE id = %s"
+        cursor.execute(sql, (id,))
+        db.commit()
+        cursor.close()
+        
+        return jsonify({"status": "success", "mensaje": "Gasto eliminado"}), 200
+    
+    except Exception as e:
+        print(f"Error al eliminar gasto: {str(e)}")
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        if db and db.is_connected():
+            db.close()
+
+# 8. ELIMINAR INGRESO
+@app.route('/eliminar-ingreso/<int:id>', methods=['DELETE'])
+def eliminar_ingreso(id):
+    db = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor()
+        
+        sql = "DELETE FROM ingresos WHERE id = %s"
+        cursor.execute(sql, (id,))
+        db.commit()
+        cursor.close()
+        
+        return jsonify({"status": "success", "mensaje": "Ingreso eliminado"}), 200
+    
+    except Exception as e:
+        print(f"Error al eliminar ingreso: {str(e)}")
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        if db and db.is_connected():
+            db.close()
