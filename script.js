@@ -470,16 +470,19 @@ async function cargarHistorial() {
 async function obtenerSaldoGlobal() {
     try{
         const res = await fetch(`${API_URL}/calcular-saldo`);
+        // Si no es 200 OK, no intentamos leer el JSON
+        if(!res.ok){
+            console.warn("EL endpoint /calcular-saldo aún no esta disponible en el servidor.");
+            return;
+        }
         const data = await res.json();
 
         if (data.status === "success"){
             // Actualizamos los displays con la info real de MySQL
             displaySueldo.textContent = data.saldo.toLocaleString('es-CO');
-            if(data.total_ingresos){
-                 // Calculamos el ahorro basado en el total de ingresos de la DB
-                const ahorroCalculado = data.total_ingresos*0.10;
-                displayAhorro.textContent = ahorroCalculado.toLocaleString('es-CO');
-            }
+            // Calculamos el ahorro basado en el total de ingresos de la DB
+            const ahorroCalculado = data.total_ingresos*0.10;
+            displayAhorro.textContent = ahorroCalculado.toLocaleString('es-CO');
            
             console.log("Pantalla actualizada");
         }
