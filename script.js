@@ -2,8 +2,8 @@
 // SECCIÓN 0: Configuración de API
 // ================================================
 
-// IMPORTANTE: Reemplaza esta URL con la URL de tu backend en Railway
-const API_URL = "gestiong-production.up.railway.app"; // <--- CAMBIA ESTO por tu URL real
+// URL de tu backend en Railway
+const API_URL = "https://gestiong-production.up.railway.app";
 
 // ================================================
 // SECCIÓN 1: Referencias a elementos del DOM
@@ -270,6 +270,7 @@ function renderizarHistorial() {
     if (botonExportar){
         botonExportar.addEventListener("click", exportarHistorial);
     }
+
 // ================================================
 // SECTOR 3.5: Función para guardar en Base de Datos
 // ================================================
@@ -279,7 +280,7 @@ async function guardarGastoEnBaseDeDatos(descripcion, valor) {
             tipo: "Gasto General",
             nombre: descripcion,
             valor: parseFloat(valor),
-            prioridad: "Media", // Valor por defecto
+            prioridad: "Media",
             fecha: new Date().toISOString().split('T')[0]
         };
 
@@ -292,10 +293,10 @@ async function guardarGastoEnBaseDeDatos(descripcion, valor) {
         if (respuesta.ok) {
             console.log("✅ Gasto guardado en la base de datos");
         } else {
-            console.error("Error al guardar en BD:", await respuesta.text());
+            console.warn(`⚠️ Backend respondió con error ${respuesta.status}. Gasto guardado solo en localStorage.`);
         }
     } catch (error) {
-        console.error("Error al conectar con la base de datos:", error);
+        console.warn("⚠️ No se pudo conectar con el backend. Gasto guardado solo en localStorage.");
     }
 }
 
@@ -375,12 +376,26 @@ document.addEventListener("DOMContentLoaded", () => {
 // ================================================
 async function cargarHistorial() {
     const cuerpoTabla = document.getElementById("cuerpo-historial");
-    const totalElem = document.getElementById("total-gastos"); // <--- IMPORTANTE: Asegúrate que este ID exista en tu HTML
+    const totalElem = document.getElementById("total-gastos");
 
     if (!cuerpoTabla) return;
 
     try {
         const respuesta = await fetch(`${API_URL}/obtener-gastos`);
+        
+        // Verificar si la respuesta es exitosa
+        if (!respuesta.ok) {
+            console.warn(`Backend no disponible (${respuesta.status}). Usando solo localStorage.`);
+            return;
+        }
+
+        // Verificar que la respuesta sea JSON
+        const contentType = respuesta.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            console.warn("Backend no devolvió JSON. Usando solo localStorage.");
+            return;
+        }
+
         const gastos = await respuesta.json();
 
         cuerpoTabla.innerHTML = "";
@@ -392,18 +407,18 @@ async function cargarHistorial() {
             fila.innerHTML = `
                 <td>${gasto.fecha}</td>
                 <td>${gasto.nombre}</td>
-                <td>$${parseFloat(gasto.valor).toLocaleString()}</td>
+                <td>${parseFloat(gasto.valor).toLocaleString()}</td>
                 <td><span class="badge ${gasto.prioridad.toLowerCase()}">${gasto.prioridad}</span></td>
             `;
             cuerpoTabla.appendChild(fila);
         });
 
-        // Solo intentamos escribir el total si el elemento existe en el HTML
         if (totalElem) {
             totalElem.textContent = sumaTotal.toLocaleString();
         }
 
     } catch (error) {
-        console.error("Error al cargar historial:", error);
+        console.warn("No se pudo conectar con el backend:", error.message);
+        console.log("La aplicación funcionará con localStorage solamente.");
     }
 }
