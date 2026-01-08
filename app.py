@@ -55,7 +55,30 @@ def guardar_gasto():
         if db and db.is_connected():
             db.close()
 
-# 2. RUTA PARA GUARDAR INGRESOS
+# 2. RUTA PARA OBTENER GASTOS (NUEVO)
+@app.route('/obtener-gastos', methods=['GET'])
+def obtener_gastos():
+    db = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)  # dictionary=True para obtener resultados como dict
+        
+        # Consulta para obtener todos los gastos
+        sql = "SELECT * FROM gastos ORDER BY fecha DESC"
+        cursor.execute(sql)
+        gastos = cursor.fetchall()
+        
+        cursor.close()
+        return jsonify(gastos), 200
+    
+    except Exception as e:
+        print(f"Error al obtener gastos: {str(e)}")
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        if db and db.is_connected():
+            db.close()
+
+# 3. RUTA PARA GUARDAR INGRESOS
 @app.route('/guardar-ingreso', methods=['POST'])
 def guardar_ingreso():
     db = None
