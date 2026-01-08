@@ -138,7 +138,7 @@ setTimeout(() => { displaySueldo.style.color = "";}, 500);
 
 
 //==========================================================================
-// Funcionalidad de historial
+// Funcionalidad de historial y modal
 //==========================================================================
 
 // CORRECCIÓN 1: Verificar que el botón existe antes de agregar el listener
@@ -166,15 +166,12 @@ if (modalConfirmar) {
 }
 
 //Lógica del botón "Cancelar" dentro del Modal
-const modalCancel = document.getElementById("modal-cancel");
-if (modalCancel) {
-    modalCancel.addEventListener("click", () => {
-        const modal = document.getElementById("custom-modal");
-        if (modal) {
-            modal.classList.add("modal-hidden"); // Solo cerramos
-        }
-    });
-}
+
+document.getElementById("modal-cancelar").addEventListener("click", () => {
+    document.getElementById("custom-modal").classList.add("modal-hidden"); // Solo cerramos
+
+});
+
 
 function guardarEnHistorial(total, descripcion, fecha) {
     // 1. Intentamos traer lo que ya existe en el historial. 
