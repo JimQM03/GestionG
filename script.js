@@ -1,12 +1,12 @@
 // ================================================
-// SECCIÓN 0: Configuración de API
+// SECTOR 0: Configuración de API
 // ================================================
 
 // URL de tu backend en Railway
 const API_URL = "https://gestiong-production.up.railway.app";
 
 // ================================================
-// SECCIÓN 1: Referencias a elementos del DOM
+// SECTOR 1: Referencias a elementos del DOM
 // ================================================
 
 // ARRAYS
@@ -59,7 +59,7 @@ const botonBorrarHistorial = document.getElementById("botonBorrarHistorial");
 
 
 // ================================================
-// SECCIÓN 2: Funcionalidad de ingresos
+// SECTOR 2: Funcionalidad de ingresos
 // ================================================
 
 botonGuardar.addEventListener("click", async () => {
@@ -99,33 +99,50 @@ botonGuardar.addEventListener("click", async () => {
 
 
 // ================================================
-// SECCIÓN 3: Funcionalidad de gastos
+// SECTOR 3: Funcionalidades
+// ================================================
+// ================================================
+// SECTOR 3.1: Funcionalidad de gastos
 // ================================================
 
-// 1. Esto hace que al abrir la página, los datos guardados aparezcan solos
-document.addEventListener("DOMContentLoaded", renderizarHistorial);
-
 botonCalcularGastos.addEventListener("click", async () => {
-// Extraemos los valores de los inputs
-const valorGasto = parseFloat(valorGastoReal.value) || 0;
-const fechaSeleccionada = fechaGastoReal.value;
-const descripcion = descGasto.value;
+    // Extraemos los valores de los inputs
+    const valorGasto = parseFloat(valorGastoReal.value) || 0;
+    const vCompras = parseFloat(gastoCompras.value) || 0;
+    const vAntojos = parseFloat(gastoAntojos.value) || 0;
+    const vDeudaC = parseFloat(deudaCorto.value) || 0;
+    const vDeudaL = parseFloat(deudaLargo.value) || 0;
 
-// Si falta algún dato o el valor es 0, detenemos el proceso con un aviso
-if (valorGasto <=0 || descripcion === "" || fechaSeleccionada === ""){
-    mostrarNotificacion("Porfavor, completa todos los campos", "error");
-    return
-}
+    const fechaSeleccionada = fechaGastoReal.value || new Date().toISOString().split('T')[0];
+    const descripcion = descGasto.value || "Gasto General";
 
-// Resaltamos el sueldo en rojo brevemente para confirmar el descuento
-displaySueldo.style.color = "#dc3545"; 
-setTimeout(() => { displaySueldo.style.color = "";}, 500);
+    // Creamos una lista de lo que tenga valor mayor a 0 para enviarlo a la DB
+    const gastoAProcesar = [];
 
-await guardarGastoEnBaseDeDatos(descripcion, valorGasto);
+    if(valorGasto > 0) gastoAProcesar.push({ nombre: descripcion, valor: valorGasto});
+    if (vCompras > 0) gastoAProcesar.push({ nombre: "Mercado/Día a día", valor:vCompras});
+    if (vAntojos > 0) gastoAProcesar.push({ nombre: "Antojos y salidad", valor:vAntojos});
+    if (vDeudaC > 0) gastoAProcesar.push({ nombre: "Deuda corto plazo", valor:vDeudaC});
+    if (vDeudaL > 0) gastoAProcesar.push({ nombre: "Deuda largo plazo", valor:vDeudaL});
 
-await obtenerSaldoGlobal();
-await cargarHistorial();
-// --- Limpieza de inputs ---
+    // Si falta algún dato o el valor es 0, detenemos el proceso con un aviso
+    if (gastoAProcesar.length === 0){
+        mostrarNotificacion("Porfavor, completa todos los campos", "error");
+        return
+    }
+
+    //Enviamos cada gasto detectado a la base de datos
+    for (const gasto of gastoAProcesar){
+        await guardarGastoEnBaseDeDatos(gasto.nombre, gasto.valor, fechaSeleccionada);
+    }
+    // Resaltamos el sueldo en rojo brevemente para confirmar el descuento
+    displaySueldo.style.color = "#dc3545"; 
+
+    setTimeout(() => { displaySueldo.style.color = "";}, 500);
+
+    await obtenerSaldoGlobal();
+    await cargarHistorial();
+    // --- Limpieza de inputs ---
     [valorGastoReal, fechaGastoReal, descGasto, gastoCompras, gastoAntojos, deudaCorto, deudaLargo].forEach(input => {
         if(input) input.value="";
     });
@@ -134,10 +151,10 @@ await cargarHistorial();
 
 
 //==========================================================================
-// Funcionalidad de historial y modal
+// SECTOR 3.2: Funcionalidad de historial y modal
 //==========================================================================
 
-// CORRECCIÓN 1: Verificar que el botón existe antes de agregar el listener
+// Verificar que el botón existe antes de agregar el listener
 if (botonBorrarHistorial) {
     botonBorrarHistorial.addEventListener("click", () => {
         const modal = document.getElementById("custom-modal");
@@ -184,15 +201,15 @@ function guardarEnHistorial(total, descripcion, fecha) {
     // 3. Lo agregamos a nuestra lista
     historial.push(nuevoRegistro);
 
-    // 4. ¡A la maleta! Convertimos la lista a texto y la guardamos
+    // Convertimos la lista a texto y la guardamos
     localStorage.setItem("historialGastos", JSON.stringify(historial));
     
-    // 5. Actualizamos lo que se ve en pantalla
+    // Actualizamos lo que se ve en pantalla
     renderizarHistorial();
 }
 
 function renderizarHistorial() {
-    // CORRECCIÓN 2: Mover totalElem al inicio de la función
+    // Mover totalElem al inicio de la función
     const totalElem = document.getElementById("total-gastado");
     
     // 1. Traemos los datos y los convertimos de texto a Lista (Array)
@@ -231,7 +248,7 @@ function renderizarHistorial() {
 }
 
 //==========================================================================
-// Funcionalidad de Exportación
+// SECTOR 3.2: Funcionalidad de Exportación
 //==========================================================================
 
 // Esta función convierte el historial en un archivo de texto (.txt) o CSV
@@ -273,16 +290,16 @@ function renderizarHistorial() {
     }
 
 // ================================================
-// SECTOR 3.5: Función para guardar en Base de Datos
+// SECTOR 3.3: Función para guardar en Base de Datos
 // ================================================
-async function guardarGastoEnBaseDeDatos(descripcion, valor) {
+async function guardarGastoEnBaseDeDatos(descripcion, valor, fechaManual) {
     try {
         const datosGasto = {
             tipo: "Gasto General",
             nombre: descripcion,
             valor: parseFloat(valor),
             prioridad: "Media",
-            fecha: fechaGastoReal.value || new Date().toISOString().split('T')[0]
+            fecha: fechaManual
         };
 
         const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
@@ -327,27 +344,153 @@ async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
 }
 
 // ================================================
-// SECTOR 3.6: Funcionalidad de Notificaciones
+// SECTOR 3.4: Funcionalidad de Notificaciones
 // ================================================
 function mostrarNotificacion(mensaje, tipo = "success") {
-    const contenedor = document.getElementById("notificacion-container");
-    const texto = document.getElementById("notificacion-mensaje");
+    // Buscamos los elementos del modal de notificación
+    const modal = document.getElementById("modal-notificacion");
+    const texto = document.getElementById("mensaje-notificacion-modal");
+    const icono = document.getElementById("icono-notificacion");
+    const btnCerrar = document.getElementById("btn-cerrar-notif");
     
-    if (!contenedor || !texto) {
+    // Por si el modal deja de funcionar usamos un alert para no romper la app
+    if (!modal || !texto) {
         console.warn("No se encontraron los elementos de notificación, usando alert.");
         alert(mensaje);
         return;
     }
 
     texto.textContent = mensaje;
-    contenedor.className = `notificacion-${tipo}`;
-    contenedor.classList.remove("notificacion-hidden");
+    
+    // Personalizamos el icono según el tipo
+    if(tipo === "success"){
+        icono.textContent="✅";
+        icono.style.color="#28a745";
+    }else if(tipo === "error"){
+        icono.textContent="⚠️";
+        icono.style.color="#dc3545";
+    }else{
+        icono.textContent="ℹ️";
+        icono.style.color="#007bff";
+    }
 
+    // Mostramos el modal
+    modal.classList.remove("modal-hidden");
+
+    // Funcionamiento boton cerrar
+    if(btnCerrar){
+        btnCerrar.onclick = () => {
+            modal.classList.add("modal-hidden");
+        }
+    }
+
+    // Cerrar automaticamente a los 5 segundos si el usuario no hace nada
     setTimeout(() => {
-        contenedor.classList.add("notificacion-hidden");
-    }, 3000);
+        modal.classList.add("modal-hidden");
+    }, 5000);
 }
 
+// ================================================
+// SECTOR 3.5: Funcionalidad borrar gasto (individual)
+// ================================================
+
+async function confirmarEliminar(id) {
+    const modal = document.getElementById("modal-confirmar-eliminar");
+    const btnSi = document.getElementById("btn-si-eliminar");
+    const btnNo = document.getElementById("btn-no-eliminar");
+
+    if(!modal || !btnSi || !btnNo) return;
+
+    // Mostramos el modal
+    modal.classList.remove("modal-hidden");
+
+    //Limpiamos el evento anterior para que no se duplique
+    btnSi.onclick = null;
+    // Si hace clic en "Sí"
+    btnSi.onclick = async() => {
+        try{
+            modal.classList.add("modal-hidden");
+
+            const res = await fetch(`${API_URL}/eliminar-gasto/${id}`,{method: 'DELETE'});
+            if (res.ok){
+                mostrarNotificacion("Gasto eliminado", "success");
+                await cargarHistorial(); // Recargamos la tabla
+                await obtenerSaldoGlobal(); //Actualizamos el saldo
+            }else{
+                mostrarNotificacion("El servidor no pudo borrar el gasto", "error");
+            }
+        }catch (error){
+            console.error("Error al eliminar:", error);
+            mostrarNotificacion("Error de conexión con el servidor", "error");
+        }
+    };
+
+    // Si hace clic en "No" o "Cancelar" 
+    btnNo.onclick = () => {
+        modal.classList.add("modal-hidden");
+    };
+}
+
+// ================================================
+// SECTOR 3.6: Funcionalidad grafico 
+// ================================================
+
+let miGrafico;
+
+function actualizarGrafico(gastos){
+    const canvas = document.getElementById('graficoGastos');
+    if(!canvas || !gastos || gastos.length === 0) return;
+    const ctx = canvas.getContext('2d')
+
+    // Agrupar por nombre
+    const resumen = {};
+    gastos.forEach(g => {
+        resumen[g.nombre] = (resumen[g.nombre] || 0) + parseFloat(g.valor);
+    });
+
+    const etiquetas = Object.keys(resumen);
+    const valores = Object.values(resumen);
+
+    const coloresDinamicos = etiquetas.map(nombre => {
+        const n = nombre.toLowerCase();
+        if(n.includes("deuda") || n.includes("celular")) return '#8B0000';
+        if(n.includes("antojo")) return '#FFC107';
+        if(n.includes("mercado")) return '#28A745';
+        return '#007bff';
+    });
+    if(miGrafico){
+        miGrafico.destroy();
+    }
+
+    miGrafico = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: etiquetas,
+            datasets: [{
+                data: valores,
+                backgroundColor: coloresDinamicos,
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels:{
+                        boxWidth: 12,
+                        font: { size:11 }
+                    }
+                },
+                
+            },
+            cutout: '60%' // Hace que el centro sea más grande (estilo anillo)
+        }
+    });
+}
 // ================================================
 // SECTOR 4: Conexión y Guardado
 // ================================================
@@ -358,11 +501,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ================================================
-// SECTOR 5: Carga de Historial Corregida
+// SECTOR 5: Carga de Historial
 // ================================================
 async function cargarHistorial() {
     const cuerpoTabla = document.getElementById("cuerpo-historial");
-    const totalElem = document.getElementById("total-gastos");
+    const totalElem = document.getElementById("total-gastado");
 
     if (!cuerpoTabla) return;
 
@@ -372,6 +515,7 @@ async function cargarHistorial() {
         // Verificar si la respuesta es exitosa
         if (!respuesta.ok) {
             console.warn(`Backend no disponible (${respuesta.status}). Usando solo localStorage.`);
+            renderizarHistorial();
             return;
         }
 
@@ -384,28 +528,41 @@ async function cargarHistorial() {
 
         const gastos = await respuesta.json();
 
+        actualizarGrafico(gastos);
+
         cuerpoTabla.innerHTML = "";
         let sumaTotal = 0;
 
         gastos.forEach(gasto => {
-            sumaTotal += parseFloat(gasto.valor);
+            // Sumamos el valor de cada gasto traído de la base de datos
+            const valorNumerico = parseFloat(gasto.valor) || 0;
+            sumaTotal += valorNumerico;
+
             const fila = document.createElement("tr");
             fila.innerHTML = `
                 <td>${gasto.fecha}</td>
                 <td>${gasto.nombre}</td>
-                <td>${parseFloat(gasto.valor).toLocaleString()}</td>
+                <td style="color: #dc3545; font-weight: bold">${parseFloat(gasto.valor).toLocaleString()}</td>
                 <td><span class="badge ${gasto.prioridad.toLowerCase()}">${gasto.prioridad}</span></td>
+                <td>
+                    <button class="btn-eliminar" onclick="confirmarEliminar(${gasto.id})">
+                        🗑️
+                    </button>
+                </td>    
             `;
             cuerpoTabla.appendChild(fila);
         });
-
+        // ACTUALIZACIÓN DEL TOTAL:
         if (totalElem) {
-            totalElem.textContent = sumaTotal.toLocaleString();
+            // Formateamos el total con signo de pesos y puntos de miles
+            totalElem.textContent = "$" + sumaTotal.toLocaleString('es-CO');
+            console.log("Suma total actualizada: ", sumaTotal);
         }
 
     } catch (error) {
         console.warn("No se pudo conectar con el backend:", error.message);
         console.log("La aplicación funcionará con localStorage solamente.");
+        renderizarHistorial();
     }
 }
 // ================================================

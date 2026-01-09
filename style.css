@@ -162,6 +162,22 @@ button:active {
     transform: translateY(0);
 }
 
+.btn-eliminar{
+    background-color: transparent;
+    color: #ff4d4d;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.btn-eliminar:hover{
+    background-color: #ff4d4d;
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 77, 77, 0.3);
+    transform: translateY(-1px);
+}
 
 /* ===============================================
    AGENDA DE PAGOS (resultado)
@@ -482,36 +498,83 @@ input[type="date"]{
 /* ===============================================
     Estilos para el Modal Personalizado 
    ===============================================*/
-
-#custom-modal {
-    position: fixed;
+#custom-modal,
+#modal-notificacion,
+#modal-confirmar-eliminar{
+    position: fixed !important;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    display: flex; /*Centra la tarjeta*/
     align-items: center;
-    z-index: 2000;
+    justify-content: center;
+    z-index: 9999 !important;
 }
-
-.modal-content {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    text-align: center;
+.modal-content,
+.notificacion-card {
+    background: white !important;
+    padding: 30px !important;
+    border-radius: 15px !important;
+    text-align: center !important;
     max-width: 400px;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    color: #333 !important;
 }
 
-.modal-hidden {display: none !important;}
+.modal-hidden{
+    display: none !important;
+}
 
-.modal-actions {
+.modal-actions, .modal-footer{
     display: flex;
     gap: 10px;
     justify-content: center;
     margin-top: 20px;
 }
+
+#icono-notificaicion{
+    font-size: 50px;
+    margin-bottom: center;
+    margin-top: 20px;
+}
+
+#icono-notificacion{
+    font-size: 50px;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.btn-danger {background-color: #dc3545 !important; color: white !important;}
+.btn-secondary {background-color: #6c757d !important; color: white !important;}
+
+/* ===============================================
+   Estilos para el grafico
+   =============================================== */
+#contenedor-grafico{
+    background-color: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    text-align: center;
+}
+
+#contenedor-grafico h3{
+    font-size: 16px;
+    margin-bottom: 15px;
+    color: #001f3f;
+}
+
+#graficoGastos{
+    max-width: 100% !important;
+    height: auto !important;
+    display: block;
+    margin: 0 auto;
+}
+
 /* ===============================================
    RESPONSIVE - Para pantallas chiquitas
    =============================================== */

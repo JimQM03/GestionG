@@ -34,8 +34,15 @@
             </section>
             
             <button id="botonGuardar">Guardar</button>
-        </div>
+            <br><br><br>
 
+            <!--Grafico de gastos-->
+            <section id="contenedor-grafico">
+                <h3>Distribución de Gastos</h3>
+                <canvas id="graficoGastos"></canvas>
+            </section>
+
+        </div>
         <!-- ============================================
              COLUMNA DERECHA - Planificador de gastos
         ============================================ -->
@@ -91,6 +98,8 @@
                                     <th>Fecha</th>
                                     <th>Descrición</th>
                                     <th>Costo</th>
+                                    <th>Prioridad</th>
+                                    <th>Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="cuerpo-historial">
@@ -118,7 +127,7 @@
         <span id="notificacion-mensaje"></span>
     </div>
 
-    <!--Modal de confirmación personalizado-->
+    <!--Modal de borrar historial-->
     <div id="custom-modal" class="modal-hidden">
         <div class="modal-content">
             <h3>¿Estás seguro?</h3>
@@ -129,6 +138,29 @@
             </div>
         </div>
     </div>
+    <!--Modal informativo-->
+    <div id="modal-notificacion" class="modal-hidden">
+        <div class="modal-content notificacion-card">
+            <div id="icono-notificacion">✅</div>
+            <p id="mensaje-notificacion-modal"></p>
+            <button id="btn-cerrar-notif" class="boton-primario">Entendido</button>
+        </div>
+    </div>
+    <!--Modal de eliminacion individual-->
+    <div id="modal-confirmar-eliminar" class="modal-hidden">
+        <div class="modal-content notification-card">
+            <div style="font-size: 50px;">🗑️</div>
+            <p>¿Estás seguro de que quieres eliminar este gasto?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btn-si-eliminar" class="btn-danger">Sí, borrar</button>
+                <button id="btn-no-eliminar" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!--Llamado del grafico-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script> <!--Estamos descargandola desde la pagina cdn.jsdelivr.net-->
+
     <!--Llamado del script-->
     <script src="script.js"></script>
 </body>
