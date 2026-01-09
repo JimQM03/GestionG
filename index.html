@@ -35,44 +35,39 @@
             </div>
         </section>
     </main>
- <script>
+<script>
 const loginForm = document.querySelector('form');
 
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const usuario = document.querySelector('input[name="usuario"]').value;
     const password = document.querySelector('input[name="password"]').value;
 
-    // --- MODO BETA / EMERGENCIA ---
-    // Si usas estas credenciales, entra directo sin esperar al servidor
+    // ENTRAR DIRECTO SI ERES TÚ
     if (usuario === "Jim" && password === "June0305") {
         localStorage.setItem('usuario_logueado', usuario);
-        localStorage.setItem('auth_token', 'token_beta_emergencia'); // Token ficticio para saltar la validacion
+        localStorage.setItem('auth_token', 'token-beta-contingencia');
         window.location.href = 'Main.html';
         return;
     }
 
-    // --- INTENTO DE CONEXIÓN REAL AL SERVIDOR ---
     try {
         const response = await fetch('https://gestiong-production.up.railway.app/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ usuario, password })
         });
-
         const data = await response.json();
-
         if (data.status === 'success') {
             localStorage.setItem('usuario_logueado', usuario);
             localStorage.setItem('auth_token', data.token);
             window.location.href = 'Main.html';
-        } else {
-            alert("Error: " + (data.mensaje || "Credenciales incorrectas"));
         }
     } catch (error) {
-        console.error("Error en el login:", error);
-        alert("El servidor está en mantenimiento (Modo Beta). Usa las credenciales de administrador.");
+        // SI FALLA EL SERVIDOR, ENTRA IGUAL (MODO BETA)
+        localStorage.setItem('usuario_logueado', usuario);
+        localStorage.setItem('auth_token', 'token-beta');
+        window.location.href = 'Main.html';
     }
 });
 </script>
