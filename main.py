@@ -23,7 +23,7 @@ def conectar_db():
             user=os.getenv("MYSQLUSER"),
             password=os.getenv("MYSQLPASSWORD"),
             database=os.getenv("MYSQLDATABASE"),
-            port=int(os.getenv("MYSQLPORT", 3306))
+            port=int(os.getenv("MYSQLPORT", 32514))
         )
     except Exception as e:
         print(f"ERROR DB: {e}")
