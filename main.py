@@ -27,15 +27,16 @@ CORREOS_CLIENTES = {
 # --- CONEXIÓN A BASE DE DATOS ---
 def conectar_db():
     try:
+        # Forzamos los datos de tu .env directamente para asegurar la entrega
         return mysql.connector.connect(
-            host=os.getenv("DB_HOST", "nozomi.proxy.rlwy.net"),
-            user=os.getenv("DB_USER", "root"),
-            password=os.getenv("DB_PASSWORD", "egddxkxJxQTroZyaHVvEGdZJSAsFFiTS"),
-            database=os.getenv("DB_NAME", "railway"),
-            port=int(os.getenv("DB_PORT", 32514))
+            host="nozomi.proxy.rlwy.net",
+            user="root",
+            password="egddxkxJxQTroZyaHVvEGdZJSAsFFiTS",
+            database="railway",
+            port=32514
         )
     except Exception as e:
-        print(f"ERROR DB: {e}")
+        print(f"Error de conexión: {e}")
         return None
 
 # --- FUNCIÓN PARA VERIFICAR TOKEN ---
