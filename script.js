@@ -4,7 +4,15 @@
 
 // URL de tu backend en Railway
 const API_URL = "https://gestiong-production.up.railway.app";
-const fetchConfig = { credentials: 'include' };
+
+// Función para obtener headers con token
+function getAuthHeaders() {
+    const token = localStorage.getItem('auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+}
 
 // ================================================
 // SECCION 1: Referencias a elementos del DOM
@@ -296,8 +304,7 @@ async function guardarGastoEnBaseDeDatos(descripcion, valor) {
 
         const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: 'include',
+            headers: getAuthHeaders(),
             body: JSON.stringify(datosGasto)
         });
 
@@ -324,8 +331,7 @@ async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
 
         const respuesta = await fetch(`${API_URL}/guardar-ingreso`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: 'include',
+            headers: getAuthHeaders(),
             body: JSON.stringify(datosIngreso)
         });
 
@@ -372,7 +378,7 @@ async function cargarHistorial() {
 
     try {
         const respuesta = await fetch(`${API_URL}/obtener-gastos`, {
-            credentials: 'include'
+            headers: getAuthHeaders()
         });
         
         // Verificar si la respuesta es exitosa
@@ -428,7 +434,7 @@ async function cargarHistorial() {
 async function obtenerSaldoGlobal() {
     try{
         const res = await fetch(`${API_URL}/calcular-saldo`, {
-            credentials: 'include'
+            headers: getAuthHeaders()
         });
         
         // Si no es 200 OK, no intentamos leer el JSON

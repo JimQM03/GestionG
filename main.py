@@ -1,15 +1,21 @@
 import os
 import mysql.connector
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
+import jwt
 
 app = Flask(__name__)
 
-# Configuración de CORS con credenciales
-CORS(app, supports_credentials=True, origins=["*"])
+# Configuración de CORS para GitHub Pages
+CORS(app, 
+     origins=["https://jimqm03.github.io", "http://localhost:5500", "http://127.0.0.1:5500"],
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
 app.secret_key = "llave_secreta_gestion_g"
+JWT_SECRET = "jwt_secret_key_gestion_g_2024"
 
 # --- DICCIONARIO DE CORREOS ---
 CORREOS_CLIENTES = {
@@ -32,12 +38,25 @@ def conectar_db():
         print(f"ERROR DB: {e}")
         return None
 
+# --- FUNCIÓN PARA VERIFICAR TOKEN ---
+def verificar_token():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return None
+    
+    try:
+        token = auth_header.split(' ')[1]  # "Bearer TOKEN"
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return payload
+    except:
+        return None
+
 # --- RUTA PRINCIPAL ---
 @app.route('/')
 def index():
     return "<h1>Servidor GestionG Online ✅</h1><p>Backend funcionando correctamente</p>"
 
-# --- CREAR USUARIO (Compatible con tu estructura existente) ---
+# --- CREAR USUARIO ---
 @app.route('/crear-usuario/<u>/<p>')
 def crear_usuario(u, p):
     db = conectar_db()
@@ -48,7 +67,6 @@ def crear_usuario(u, p):
         hash_p = generate_password_hash(p)
         email = CORREOS_CLIENTES.get(u, f"{u}@gestiong.com")
         
-        # Usar tu estructura de tabla usuarios
         cursor.execute("""
             INSERT INTO usuarios (nombre_usuario, email_notificaciones, password_hash) 
             VALUES (%s, %s, %s)
@@ -60,7 +78,7 @@ def crear_usuario(u, p):
     finally:
         db.close()
 
-# --- LOGIN ---
+# --- LOGIN CON JWT ---
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -72,17 +90,22 @@ def login():
         return jsonify({"status": "error", "mensaje": "Error de conexión a BD"}), 500
     
     cursor = db.cursor(dictionary=True)
-    # Buscar por nombre_usuario en tu tabla
     cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
     user = cursor.fetchone()
     db.close()
     
     if user and check_password_hash(user['password_hash'], p):
-        session['usuario'] = u
-        session['usuario_id'] = user['id']
+        # Crear token JWT
+        token = jwt.encode({
+            'usuario_id': user['id'],
+            'usuario': u,
+            'exp': datetime.utcnow() + timedelta(days=7)
+        }, JWT_SECRET, algorithm="HS256")
+        
         return jsonify({
             "status": "success", 
-            "usuario": u, 
+            "usuario": u,
+            "token": token,
             "email": user.get('email_notificaciones', "")
         })
     
@@ -91,14 +114,13 @@ def login():
 # --- LOGOUT ---
 @app.route('/logout', methods=['POST'])
 def logout():
-    session.pop('usuario', None)
-    session.pop('usuario_id', None)
     return jsonify({"status": "success"})
 
-# --- GUARDAR GASTO (Usando tus tablas existentes) ---
+# --- GUARDAR GASTO ---
 @app.route('/guardar-gasto', methods=['POST'])
 def guardar_gasto():
-    if 'usuario_id' not in session:
+    payload = verificar_token()
+    if not payload:
         return jsonify({"error": "No autorizado"}), 401
     
     data = request.json
@@ -108,12 +130,11 @@ def guardar_gasto():
     
     cursor = db.cursor()
     try:
-        # Insertar en tu tabla gastos con usuario_id
         cursor.execute("""
             INSERT INTO gastos (usuario_id, tipo, nombre, valor, prioridad, fecha) 
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (
-            session['usuario_id'],
+            payload['usuario_id'],
             data.get('tipo', 'Gasto General'),
             data.get('nombre'),
             data.get('valor'),
@@ -128,10 +149,11 @@ def guardar_gasto():
     finally:
         db.close()
 
-# --- GUARDAR INGRESO (Usando tus tablas existentes) ---
+# --- GUARDAR INGRESO ---
 @app.route('/guardar-ingreso', methods=['POST'])
 def guardar_ingreso():
-    if 'usuario_id' not in session:
+    payload = verificar_token()
+    if not payload:
         return jsonify({"error": "No autorizado"}), 401
     
     data = request.json
@@ -141,12 +163,11 @@ def guardar_ingreso():
     
     cursor = db.cursor()
     try:
-        # Insertar en tu tabla ingresos con usuario_id
         cursor.execute("""
             INSERT INTO ingresos (usuario_id, monto, descripcion, fecha_registro) 
             VALUES (%s, %s, %s, NOW())
         """, (
-            session['usuario_id'],
+            payload['usuario_id'],
             data.get('monto'),
             data.get('descripcion', 'Ingreso de clases')
         ))
@@ -158,10 +179,11 @@ def guardar_ingreso():
     finally:
         db.close()
 
-# --- OBTENER GASTOS (Usando tu query UNION) ---
+# --- OBTENER GASTOS ---
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
-    if 'usuario_id' not in session:
+    payload = verificar_token()
+    if not payload:
         return jsonify({"error": "No autorizado"}), 401
     
     db = conectar_db()
@@ -170,16 +192,14 @@ def obtener_gastos():
     
     cursor = db.cursor(dictionary=True)
     try:
-        # Solo gastos para la tabla
         cursor.execute("""
             SELECT id, tipo, nombre, valor, prioridad, fecha 
             FROM gastos 
             WHERE usuario_id = %s 
             ORDER BY fecha DESC
-        """, (session['usuario_id'],))
+        """, (payload['usuario_id'],))
         gastos = cursor.fetchall()
         
-        # Convertir Decimal a float para JSON
         for gasto in gastos:
             if 'valor' in gasto:
                 gasto['valor'] = float(gasto['valor'])
@@ -191,49 +211,11 @@ def obtener_gastos():
     finally:
         db.close()
 
-# --- OBTENER MOVIMIENTOS (UNION de Ingresos y Gastos) ---
-@app.route('/obtener-movimientos', methods=['GET'])
-def obtener_movimientos():
-    if 'usuario_id' not in session:
-        return jsonify({"error": "No autorizado"}), 401
-    
-    db = conectar_db()
-    if not db:
-        return jsonify({"error": "Error de conexión"}), 500
-    
-    cursor = db.cursor(dictionary=True)
-    try:
-        # Tu query UNION
-        cursor.execute("""
-            SELECT 'Ingreso' as tipo, monto as valor, descripcion, fecha_registro as fecha 
-            FROM ingresos 
-            WHERE usuario_id = %s
-            UNION ALL
-            SELECT 'Gasto' as tipo, valor, nombre as descripcion, fecha 
-            FROM gastos 
-            WHERE usuario_id = %s
-            ORDER BY fecha DESC 
-            LIMIT 50
-        """, (session['usuario_id'], session['usuario_id']))
-        
-        movimientos = cursor.fetchall()
-        
-        # Convertir Decimal a float
-        for mov in movimientos:
-            if 'valor' in mov:
-                mov['valor'] = float(mov['valor'])
-        
-        return jsonify(movimientos)
-    except Exception as e:
-        print(f"Error obteniendo movimientos: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        db.close()
-
-# --- CALCULAR SALDO (Con tus tablas) ---
+# --- CALCULAR SALDO ---
 @app.route('/calcular-saldo', methods=['GET'])
 def calcular_saldo():
-    if 'usuario_id' not in session:
+    payload = verificar_token()
+    if not payload:
         return jsonify({"error": "No autorizado"}), 401
     
     db = conectar_db()
@@ -242,20 +224,18 @@ def calcular_saldo():
     
     cursor = db.cursor(dictionary=True)
     try:
-        # Sumar ingresos
         cursor.execute("""
             SELECT COALESCE(SUM(monto), 0) as total 
             FROM ingresos 
             WHERE usuario_id = %s
-        """, (session['usuario_id'],))
+        """, (payload['usuario_id'],))
         total_ingresos = float(cursor.fetchone()['total'])
         
-        # Sumar gastos
         cursor.execute("""
             SELECT COALESCE(SUM(valor), 0) as total 
             FROM gastos 
             WHERE usuario_id = %s
-        """, (session['usuario_id'],))
+        """, (payload['usuario_id'],))
         total_gastos = float(cursor.fetchone()['total'])
         
         saldo = total_ingresos - total_gastos
