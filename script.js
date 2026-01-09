@@ -4,7 +4,7 @@
 
 // URL de tu backend en Railway
 const API_URL = "https://gestiong-production.up.railway.app";
-
+const fetchConfig = { credentials: 'include' };
 // ================================================
 // SECTOR 1: Referencias a elementos del DOM
 // ================================================
