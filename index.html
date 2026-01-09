@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <title>GestionG - Iniciar Sesión</title>
+    <title>GestionG - Iniciar Sesion</title>
 </head>
 <body class="cuerpo-login">
 
@@ -36,20 +36,20 @@
         </section>
     </main>
  <script>
-    const loginForm = document.getElementById('formLogin');
+    const loginForm = document.querySelector('form[action="Main.html"]');
 
     loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Detenemos el envío automático
+        e.preventDefault(); // Detenemos el envio automatico
 
-        const usuario = document.getElementById('usuario').value;
-        const password = document.getElementById('password').value;
+        const usuario = document.querySelector('input[name="usuario"]').value;
+        const password = document.querySelector('input[name="password"]').value;
 
         try {
             const response = await fetch('https://gestiong-production.up.railway.app/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ usuario, password }),
-                // IMPORTANTE: Esto permite que el navegador guarde la cookie de sesión
+                // IMPORTANTE: Esto permite que el navegador guarde la cookie de sesion
                 credentials: 'include' 
             });
 
@@ -58,14 +58,14 @@
             if (data.status === 'success') {
                 // Guardamos el nombre solo para mostrarlo en el saludo si quieres
                 localStorage.setItem('usuario_logueado', usuario);
-                // Si todo está bien, entramos
+                // Si todo esta bien, entramos
                 window.location.href = 'Main.html';
             } else {
-                alert("❌ Error: " + (data.mensaje || "Usuario o clave incorrectos"));
+                alert("Error: " + (data.mensaje || "Usuario o clave incorrectos"));
             }
         } catch (error) {
             console.error("Error en el login:", error);
-            alert("No se pudo conectar con el servidor. Revisa tu conexión.");
+            alert("No se pudo conectar con el servidor. Revisa tu conexion.");
         }
     });
     </script>
