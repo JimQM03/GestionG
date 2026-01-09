@@ -7,6 +7,22 @@
     <title>GestiónG - Control de Finanzas</title>
 </head>
 <body>
+    <script>
+        (async function verificarSesion() {
+            try {
+                // Si el servidor no reconoce al usuario, mandará un error 401
+                const response = await fetch('https://gestiong-production.up.railway.app/obtener-gastos', {
+                    credentials: 'include'
+                });
+
+                if (response.status === 401) {
+                    window.location.href = 'index.html'; // Lo saca si no está logueado
+                }
+            } catch (error) {
+                console.error("Error de conexión:", error);
+            }
+        })();
+    </script>
     <!-- Encabezado principal -->
     <header>Gestión de cuentas</header>
 
@@ -131,5 +147,20 @@
     </div>
     <!--Llamado del script-->
     <script src="script.js"></script>
+    <script>
+        const userLogueado = localStorage.getItem('usuario_logueado');
+        if (userLogueado) {
+            document.getElementById('nombre-usuario-display').textContent = userLogueado;
+        }
+
+        async function cerrarSesion() {
+            await fetch('https://gestiong-production.up.railway.app/logout', { 
+                method: 'POST', 
+                credentials: 'include' 
+            });
+            localStorage.removeItem('usuario_logueado');
+            window.location.href = 'index.html';
+        }
+    </script>
 </body>
 
