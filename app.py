@@ -1,5 +1,8 @@
 import os
 import mysql.connector
+import smtplib
+from email.mime.text import MIMEText
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -21,6 +24,53 @@ DB_CONFIG = {
 @app.route('/')
 def home():
     return "<h1>Servidor GestionG Online</h1><p>El puerto 5000 está escuchando correctamente.</p>"
+
+#=================================================================
+# SECCION DE CORREOS
+#=================================================================
+
+# Configuración de Correo (Usa variables de entorno por seguridad)
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SENDER_EMAIL = os.getenv("EMAIL_USER")
+SENDER_PASSWORD = os.getenv("EMAIL_PASS") # App Password de Google
+RECEIVER_EMAIL = "Jimq293@gmail.com"
+
+def enviar_alerta_pago(nombre_gasto, fecha_vencimiento):
+    msg = MIMEText(f"Recordatorio: El gasto '{nombre_gasto}' vence mañana {fecha_vencimiento}.")
+    msg['Subject'] = f"⚠️ Alerta de Pago Próximo: {nombre_gasto}"
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = RECEIVER_EMAIL
+
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
+        server.quit()
+        print(f"✅ Alerta enviada para {nombre_gasto}")
+    except Exception as e:
+        print(f"❌ Error enviando correo: {e}")
+
+# Endpoint para disparar la revisión manualmente o vía Cron
+@app.route('/check-vencimientos', methods=['GET'])
+def check_vencimientos():
+    db = mysql.connector.connect(**DB_CONFIG)
+    cursor = db.cursor(dictionary=True)
+    
+    # Buscamos gastos que venzan exactamente mañana
+    manana = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    sql = "SELECT nombre, fecha FROM gastos WHERE fecha = %s AND prioridad = 'Alta'"
+    cursor.execute(sql, (manana,))
+    recordatorios = cursor.fetchall()
+    
+    for r in recordatorios:
+        enviar_alerta_pago(r['nombre'], r['fecha'])
+        
+    cursor.close()
+    db.close()
+    return jsonify({"status": "procesado", "alertas_enviadas": len(recordatorios)})
 
 # ================================================================
 # ENDPOINTS PARA GASTOS
@@ -81,6 +131,34 @@ def obtener_gastos():
     finally:
         if db and db.is_connected():
             db.close()
+
+@app.route('/debug-notificacion', methods=['GET'])
+def debug_notificacion():
+    # Este es tu Bypass de Tiempo: No consulta la DB, envía directo.
+    email_test = "jimq293@gmail.com" # Dirección a verificar
+    
+    try:
+        # Lógica de envío simplificada para el test
+        msg = MIMEText(f"TEST SISTEMA: Verificación de correo exitosa. Fecha: {datetime.now()}")
+        msg['Subject'] = "🔍 Diagnóstico GestiónG: Prueba de Dirección"
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = email_test
+
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, email_test, msg.as_string())
+        server.quit()
+
+        return jsonify({
+            "status": "success", 
+            "mensaje": f"Conexión SMTP OK. Correo enviado a {email_test}"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error", 
+            "mensaje": f"Fallo en el bypass: {str(e)}"
+        }), 500
 
 # ================================================================
 # ENDPOINTS PARA INGRESOS
