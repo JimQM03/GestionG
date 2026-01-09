@@ -5,9 +5,12 @@ from flask_cors import CORS # Importante
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt
+from flask_cors import CORS
 
 app = Flask(__name__)
 
+# Permite que jimqm03.github.io entre a la base de datos sin problemas.
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 app.secret_key = "llave_secreta_gestion_g"
 JWT_SECRET = "jwt_secret_key_gestion_g_2024"
