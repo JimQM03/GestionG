@@ -162,17 +162,23 @@ def obtener_gastos():
 # 5. CREACIÓN DE USUARIOS (Solo para ti)
 # =================================================================
 
-@app.route('/crear-usuario/<u强制/强制p>')
+@app.route('/crear-usuario/<u>/<p>')
 def crear_usuario(u, p):
     db = conectar_db()
+    if not db:
+        return "❌ Error: No se pudo conectar a la base de datos."
     cursor = db.cursor()
     try:
+        # Ciframos la contraseña antes de guardarla
+        password_encriptada = generate_password_hash(p)
         cursor.execute("INSERT INTO usuarios (usuario, password) VALUES (%s, %s)", 
-                      (u, generate_password_hash(p)))
+                      (u, password_encriptada))
         db.commit()
-        return f"✅ Usuario {u} creado correctamente."
-    except Exception as e: return str(e)
-    finally: db.close()
+        return f"✅ Usuario '{u}' creado correctamente."
+    except Exception as e:
+        return f"⚠️ Error al crear usuario: {str(e)}"
+    finally:
+        db.close()
 
 if __name__ == '__main__':
     # Usar el puerto que Railway asigne
