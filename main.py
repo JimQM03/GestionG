@@ -8,9 +8,6 @@ import jwt
 
 app = Flask(__name__)
 
-# --- CONFIGURACIÓN DE CORS TOTAL (BORRA EL PROBLEMA) ---
-# Esto le dice al servidor que acepte peticiones de CUALQUIER origen (incluyendo tu GitHub Pages)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 app.secret_key = "llave_secreta_gestion_g"
 JWT_SECRET = "jwt_secret_key_gestion_g_2024"
