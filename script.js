@@ -199,14 +199,35 @@ if (botonBorrarHistorial) {
 // Lógica del botón "Confirmar" dentro del Modal
 const modalConfirmar = document.getElementById("modal-confirmar");
 if (modalConfirmar) {
-    modalConfirmar.addEventListener("click", () =>{
-        localStorage.removeItem("historialGastos") // Borramos datos
-        renderizarHistorial(); // Actualizamos tabla
-        const modal = document.getElementById("custom-modal");
-        if (modal) {
-            modal.classList.add("modal-hidden");// Cerramos modal
+    modalConfirmar.addEventListener("click", async () =>{
+        try{
+            // Llamamos al servidor para borrar la DB de Railway
+            const respuesta = await fetch(`${API_URL}/eliminar-historial`,{
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            const resultado = await respuesta.json();
+
+            if (resultado.status === 'success'){
+                // Si el servidor borró con éxito, limpiamos lo local
+                localStorage.removeItem("historialGastos");
+
+                // Cerramos el modal
+                const modal = document.getElementById("custom-modal");
+                if (modal) modal.classList.add("modal-hidden");
+
+                // Refrescamos la interfaz
+                await cargarHistorial();// Esto dejará la tabla vacía
+                await obtenerSaldoGlobal();// Esto reiniciará el sueldo al original
+
+                mostrarNotificacion("Todo el historial ha sido borrado en la nube", "success");
+            }else{
+                mostrarNotificacion("Error: " + resultado.mensaje, "error");
+            }
+        }catch (error){
+            console.error("Error al borrar historial:", error);
+            mostrarNotificacion("No se pudo conectar con el servidor", "error");
         }
-        mostrarNotificacion("Todo el historial ha sido borrado", "success");
     });
 }
 
