@@ -8,6 +8,10 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Configuración de CORS corregida HOLA EZQUISO
+CORS(app,
+     resources={r"/*": {"origins": "https://jimqm03.github.io"}},
+     supports_credentials=True)
+app.secret_key = "llave_secreta_gestion_g"
 
 # Manejo de peticiones
 @app.after_request
@@ -16,10 +20,7 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
-CORS(app,
-     resources={r"/*": {"origins": "https://jimqm03.github.io"}},
-     supports_credentials=True)
-app.secret_key = "llave_secreta_gestion_g"
+
 
 # --- CONEXIÓN A DB ---
 def conectar_db():
