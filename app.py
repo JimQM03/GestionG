@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 # Configuración de CORS corregida
 CORS(app, 
-     origins=["http://127.0.0.1:5500", "http://localhost:5500", "https://jimqm03.github.io"],
+     origins=["http://127.0.0.1:5500", "http://localhost:5500", "https://jimqm03.github.io/GestionG/"],
      supports_credentials=True)
 
 app.secret_key = "llave_secreta_gestion_g"
