@@ -5,6 +5,37 @@
 // URL de tu backend en Railway
 const API_URL = "https://gestiong-production.up.railway.app";
 const fetchConfig = { credentials: 'include' };
+
+// ================================================
+// SECTOR 0.1: Funciones de sesión
+// ================================================
+
+// Mostrar usuario logueado
+const userLogueado = localStorage.getItem('usuario_logueado');
+if (userLogueado) {
+    const displayElement = document.getElementById('nombre-usuario-display');
+    if (userLogueado){
+        displayElement.textContent = userLogueado;
+    }
+}
+
+// Función para cerrar sesión
+async function cerrarSesion() {
+    try {
+        await fetch(`${API_URL}/logout`,{
+            method: 'POST',
+            credentials: 'include'
+        });
+        localStorage.removeItem(usuario_logueado);
+        window.location.href = 'index.html'
+    }catch (error){
+        console.error('Error al cerrar sesión:', error);
+        // Igual redirigimos aunque falle el servidor
+        localStorage.removeItem('usuario_logueado');
+        window.location.href = 'index.html';
+    }
+}
+
 // ================================================
 // SECTOR 1: Referencias a elementos del DOM
 // ================================================
@@ -485,7 +516,16 @@ function actualizarGrafico(gastos){
                         font: { size:11 }
                     }
                 },
-                
+                // Configuración para ver los montos al pasar el mouse
+                tooltip:{
+                    callbacks:{
+                        label: function(context){
+                            let label = context.label || '';
+                            let value = context.raw || 0;
+                            return `${label}: $${value.toLocaleString('es-CO')}`;
+                        }
+                    }
+                }
             },
             cutout: '60%' // Hace que el centro sea más grande (estilo anillo)
         }
@@ -494,10 +534,18 @@ function actualizarGrafico(gastos){
 // ================================================
 // SECTOR 4: Conexión y Guardado
 // ================================================
-document.addEventListener("DOMContentLoaded", () => {
-    //Traer todo de la base de datos al arrancar
-    cargarHistorial();
-    obtenerSaldoGlobal();
+document.addEventListener("DOMContentLoaded", async () => {
+    // Verificar si hay usuario logueado
+    const usuarioLogueado = localStorage.getItem('usuario_logueado');
+
+    if (!usuarioLogueado){
+        console.warn("No hay usuario logueado");
+        return;
+    }
+
+    // Trar todo de la base de datos al arrancar
+    await cargarHistorial();
+    await obtenerSaldoGlobal();
 });
 
 // ================================================

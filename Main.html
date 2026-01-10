@@ -24,7 +24,9 @@
         })();
     </script>
     <!-- Encabezado principal -->
-    <header>Gestión de cuentas</header>
+    <header>
+        Gestión de cuentas - <small id="nombre-usuario-display">Cargando...</small>
+    </header>
 
     <main class="dashboard">
         <!-- ============================================
@@ -179,20 +181,6 @@
 
     <!--Llamado del script-->
     <script src="script.js"></script>
-    <script>
-        const userLogueado = localStorage.getItem('usuario_logueado');
-        if (userLogueado) {
-            document.getElementById('nombre-usuario-display').textContent = userLogueado;
-        }
-
-        async function cerrarSesion() {
-            await fetch('https://gestiong-production.up.railway.app/logout', { 
-                method: 'POST', 
-                credentials: 'include' 
-            });
-            localStorage.removeItem('usuario_logueado');
-            window.location.href = 'index.html';
-        }
-    </script>
+    
 </body>
 
