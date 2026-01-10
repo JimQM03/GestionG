@@ -6,6 +6,7 @@
 const API_URL = "https://gestiong-production.up.railway.app";
 const fetchConfig = { credentials: 'include' };
 
+
 // ================================================
 // SECTOR 0.1: Funciones de sesión
 // ================================================

@@ -4,29 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <title>GestiónG - Control de Finanzas</title>
+    <title>GestionG - Control de Finanzas</title>
 </head>
 <body>
     <script>
-        (async function verificarSesion() {
-            try {
-                // Si el servidor no reconoce al usuario, mandará un error 401
-                const response = await fetch('https://gestiong-production.up.railway.app/obtener-gastos', {
-                    credentials: 'include'
-                });
-
-                if (response.status === 401) {
-                    window.location.href = 'index.html'; // Lo saca si no está logueado
-                }
-            } catch (error) {
-                console.error("Error de conexión:", error);
-            }
-        })();
+       (function verificarSesion() {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            window.location.href = 'index.html';
+            return;
+        }
+        console.log("Sesion iniciada en modo Beta");
+    })();
     </script>
     <!-- Encabezado principal -->
     <header>
         Gestión de cuentas - <small id="nombre-usuario-display">Cargando...</small>
     </header>
+
 
     <main class="dashboard">
         <!-- ============================================
@@ -34,7 +29,7 @@
              ============================================ -->
         <div class="columna-izquierda">
             
-            <!-- Sección de resumen: muestra los cálculos -->
+            <!-- Seccion de resumen: muestra los calculos -->
             <section id="resumenes">
                 <h3>Tu resumen</h3>
                 <p>Sueldo: <span id="Mostrar-sueldo">0</span> COP</p>   
@@ -42,10 +37,10 @@
                 <p>Valor por clase: <span id="valor-clase">0</span> COP</p>
             </section>
 
-            <!-- Entradas de información básica -->
+            <!-- Entradas de informacion basica -->
             <section id="ingresos">
                 <h3>Datos de ingresos</h3>
-                <input type="number" id="num-clases" placeholder="Número de clases dadas">
+                <input type="number" id="num-clases" placeholder="Numero de clases dadas">
                 <input type="number" id="CopQuincenal" placeholder="Sueldo en pesos">
                 
                 <textarea id="desc-ingreso" placeholder="Descripcion del ingreso (Ej: Bono Extra)" rows="2"></textarea>
@@ -78,14 +73,14 @@
                     </div>
 
                     <div class="fila-gasto">
-                        <textarea id="desc-gasto" placeholder="¿En qué consistió este gasto?" rows="2" style="width: 100%;"></textarea>
+                        <textarea id="desc-gasto" placeholder="¿En que consistio este gasto?" rows="2" style="width: 100%;"></textarea>
                     </div>
                 </div>
 
-                <!-- Gastos variables del día a día -->
+                <!-- Gastos variables del dia a dia -->
                 <div class="seccion-gastos">
                     <h3>Gastos Variables</h3>
-                    <input type="number" id="gasto-compras" placeholder="Mercado/Día a día">
+                    <input type="number" id="gasto-compras" placeholder="Mercado/Dia a dia">
                     <input type="number" id="gasto-antojos" placeholder="Antojos y salidas">
                 </div>
 
@@ -99,22 +94,22 @@
                 <button id="botonCalcularGastos">Calcular Gastos</button>
             </section>
 
-            <!-- Aquí se mostrará el calendario de pagos -->
+            <!-- Aqui se mostrara el calendario de pagos -->
             <section id="lista-proximos-pagos">
-                <!--Contenedor flexible para título y botón de exportar-->
+                <!--Contenedor flexible para titulo y boton de exportar-->
                 <div class="header-historial">
                     <h2>Agenda de Pagos Quincenal</h2>
                     <button id="boton-exportar">Exportar</button>
                 </div>
                 
                 <section id="seccion-historial">
-                    <h2>Pestaña de Historial</h2>
+                    <h2>Pestana de Historial</h2>
                     <div id="contenedor-historial">
                         <table id = "tabla-historial">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
-                                    <th>Descrición</th>
+                                    <th>Descricion</th>
                                     <th>Costo</th>
                                     <th>Prioridad</th>
                                     <th>Acción</th>
@@ -122,7 +117,7 @@
                             </thead>
                             <tbody id="cuerpo-historial">
                                 <tr>
-                                    <td colspan="3" class="texto-centrado">Aún no hay registros en el historial.</td>
+                                    <td colspan="3" class="texto-centrado">Aun no hay registros en el historial.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -145,11 +140,11 @@
         <span id="notificacion-mensaje"></span>
     </div>
 
-    <!--Modal de borrar historial-->
+    <!--Modal de confirmacion personalizado-->
     <div id="custom-modal" class="modal-hidden">
         <div class="modal-content">
-            <h3>¿Estás seguro?</h3>
-            <p id="modal-texto">Esta acción no se podra deshacer.</p>
+            <h3>¿Estas seguro?</h3>
+            <p id="modal-texto">Esta accion no se podra deshacer.</p>
             <div class="modal-actions">
                 <button id="modal-confirmar" class="btn-danger">Confirmar</button>
                 <button id="modal-cancelar" class="btn-secondary">Cancelar</button>
