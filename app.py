@@ -7,8 +7,12 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Configuración de CORS corregida
+# Configuración de CORS corregida HOLA EZQUISO
+
 # Configuración corregida (SIN rutas, solo dominios)
+
+
+
 CORS(app, 
      origins=[
          "http://127.0.0.1:5500", 
