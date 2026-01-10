@@ -8,10 +8,10 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Configuración de CORS corregida
+# Esto permite peticiones de cualquier origen, incluyendo GitHub Pages y local
 CORS(app, 
-     origins=["http://127.0.0.1:5500", "http://localhost:5500", "https://jimqm03.github.io/GestionG/"],
+     origins="*", 
      supports_credentials=True)
-
 app.secret_key = "llave_secreta_gestion_g"
 
 # --- CONEXIÓN A DB ---
