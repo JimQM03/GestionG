@@ -177,29 +177,6 @@ def eliminar_historial():
 def index():
     return "<h1>Servidor GestionG Online Corregido</h1>"
 
-# --- ELIMINAR EL HISTORIAL ---
-@app.route('/eliminar-historial', methods=['DELETE'])
-def eliminar_historial():
-    usuario = session.get('usuario')
-    if not usuario: 
-        return jsonify({"error": "No autenticado"}), 401
-    
-    db = conectar_db()
-    if not db: 
-        return jsonify({"status": "error", "mensaje": "Error de conexión"}), 500
-    
-    cursor = db.cursor()
-    try:
-        # Eliminamos solo los gastos que pertenecen al usuario logueado
-        cursor.execute("DELETE FROM gastos WHERE usuario = %s", (usuario,))
-        db.commit()
-        return jsonify({"status": "success", "mensaje": "Historial borrado en DB"})
-    except Exception as e:
-        print(f"Error al borrar historial: {e}")
-        return jsonify({"status": "error", "mensaje": str(e)}), 500
-    finally:
-        cursor.close()
-        db.close()
 
 # SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
