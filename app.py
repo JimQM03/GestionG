@@ -29,7 +29,7 @@ def conectar_db():
         print(f"Error de conexión DB: {e}")
         return None
 
-# --- LOGIN ---
+# --- LOGIN ----
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
