@@ -9,14 +9,15 @@ app = Flask(__name__)
 
 # Configuración de CORS corregida HOLA EZQUISO
 
-# Configuración corregida (SIN rutas, solo dominios)
-
-
-
-CORS(app, 
-     origins=["https://jimqm03.github.io"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization"],
+# Manejo de peticiones
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'https://jimqm03.github.io')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+CORS(app,
+     resources={r"/*": {"origins": "https://jimqm03.github.io"}},
      supports_credentials=True)
 app.secret_key = "llave_secreta_gestion_g"
 
