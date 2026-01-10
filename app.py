@@ -14,11 +14,9 @@ app = Flask(__name__)
 
 
 CORS(app, 
-     origins=[
-         "http://127.0.0.1:5500", 
-         "http://localhost:5500", 
-         "https://jimqm03.github.io"
-     ],
+     origins=["https://jimqm03.github.io"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"],
      supports_credentials=True)
 app.secret_key = "llave_secreta_gestion_g"
 
