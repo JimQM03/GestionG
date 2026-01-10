@@ -143,7 +143,7 @@ def calcular_saldo():
     return jsonify({"status": "error", "mensaje": "Credenciales incorrectas"}), 401
 
 # --- LOGOUT ---
-@app.route('/logout', mmethods=['POST'])
+@app.route('/logout', methods=['POST'])
 def logout():
     session.pop('usuario', None)
     return jsonify({"status": "success"})
