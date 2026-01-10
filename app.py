@@ -39,11 +39,11 @@ def login():
     if not db: return jsonify({"status": "error", "mensaje": "Error DB"}), 500
     
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM usuarios WHERE usuario = %s", (u,))
+    cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
     user = cursor.fetchone()
     db.close()
     
-    if user and check_password_hash(user['password'], p):
+    if user and check_password_hash(user['contrasena'], p):
         session['usuario'] = u
         return jsonify({"status": "success", "usuario": u})
     return jsonify({"status": "error", "mensaje": "Credenciales incorrectas"}), 401
@@ -148,6 +148,31 @@ def eliminar_gasto(id):
     db.close()
     return jsonify({"status": "success"})
 
+# --- ELIMINAR TODO EL HISTORIAL ---
+@app.route('/eliminar-historial', methods=['DELETE'])
+def eliminar_historial():
+    usuario = session.get('usuario')
+    if not usuario: 
+        return jsonify({"error": "No autenticado"}), 401
+    
+    db = conectar_db()
+    if not db: 
+        return jsonify({"status": "error", "mensaje": "Error de conexión"}), 500
+    
+    cursor = db.cursor()
+    try:
+        # Eliminamos solo los gastos que pertenecen al usuario logueado
+        cursor.execute("DELETE FROM gastos WHERE usuario = %s", (usuario,))
+        db.commit()
+        return jsonify({"status": "success", "mensaje": "Historial borrado en DB"})
+    except Exception as e:
+        print(f"Error al borrar historial: {e}")
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+# SIEMPRE EN EL FINAL SINO FALLA TODO
 @app.route('/')
 def index():
     return "<h1>Servidor GestionG Online Corregido</h1>"
