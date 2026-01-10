@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 # Configuración de CORS corregida
 CORS(app, 
-     origins=["http://127.0.0.1:5500", "http://localhost:5500", "https://jimqm03.github.io/GestionG/"],
+     origins=["http://127.0.0.1:5500", "http://localhost:5500", "https://jimqm03.github.io"],
      supports_credentials=True)
 
 app.secret_key = "llave_secreta_gestion_g"
@@ -41,18 +41,14 @@ def login():
     cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
     user = cursor.fetchone()
+    
+    cursor.close()
     db.close()
     
     if user and check_password_hash(user['contrasena'], p):
         session['usuario'] = u
         return jsonify({"status": "success", "usuario": u})
     return jsonify({"status": "error", "mensaje": "Credenciales incorrectas"}), 401
-
-# --- LOGOUT ---
-@app.route('/logout', methods=['POST'])
-def logout():
-    session.pop('usuario', None)
-    return jsonify({"status": "success"})
 
 # --- GESTIÓN DE GASTOS ---
 @app.route('/guardar-gasto', methods=['POST'])
@@ -76,14 +72,17 @@ def guardar_gasto():
         print(f"Error: {e}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
+        cursor.close()
         db.close()
-
+        
+# --- Obtener gastos ---
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
     usuario = session.get('usuario')
     if not usuario: return jsonify({"error": "No autenticado"}), 401
     
     db = conectar_db()
+    if not db: return jsonify({"error": "Error DB"}), 500
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("SELECT * FROM gastos WHERE usuario = %s ORDER BY fecha DESC", (usuario,))
@@ -91,8 +90,9 @@ def obtener_gastos():
         gastos = cursor.fetchall()
         return jsonify(gastos)
     finally:
+        cursor.close()
         db.close()
-
+        
 # --- GESTIÓN DE INGRESOS ---
 @app.route('/guardar-ingreso', methods=['POST'])
 def guardar_ingreso():
@@ -110,8 +110,9 @@ def guardar_ingreso():
         db.commit()
         return jsonify({"status": "success"})
     finally:
+        cursor.close()
         db.close()
-
+        
 # --- CÁLCULO DE SALDO ---
 @app.route('/calcular-saldo', methods=['GET'])
 def calcular_saldo():
@@ -134,7 +135,9 @@ def calcular_saldo():
             "total_gastos": float(total_gastos)
         })
     finally:
+        cursor.close()
         db.close()
+        
 
 @app.route('/eliminar-gasto/<int:id>', methods=['DELETE'])
 def eliminar_gasto(id):
@@ -145,10 +148,15 @@ def eliminar_gasto(id):
     cursor = db.cursor()
     cursor.execute("DELETE FROM gastos WHERE id = %s AND usuario = %s", (id, usuario))
     db.commit()
+    cursor.close()
     db.close()
     return jsonify({"status": "success"})
 
-# --- ELIMINAR TODO EL HISTORIAL ---
+@app.route('/')
+def index():
+    return "<h1>Servidor GestionG Online Corregido</h1>"
+
+# --- ELIMINAR EL HISTORIAL ---
 @app.route('/eliminar-historial', methods=['DELETE'])
 def eliminar_historial():
     usuario = session.get('usuario')
@@ -171,12 +179,6 @@ def eliminar_historial():
     finally:
         cursor.close()
         db.close()
-
-# SIEMPRE EN EL FINAL SINO FALLA TODO
-@app.route('/')
-def index():
-    return "<h1>Servidor GestionG Online Corregido</h1>"
-
 
 # SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
