@@ -3,7 +3,7 @@
 // ================================================
 
 // URL de tu backend en Railway
-const API_URL = "https://gestiong-production.up.railway.app";
+const API_URL = "https://web-production-99037.up.railway.app";
 const fetchConfig = { credentials: 'include' };
 
 
@@ -12,11 +12,13 @@ const fetchConfig = { credentials: 'include' };
 // ================================================
 
 // Mostrar usuario logueado
-const userLogueado = localStorage.getItem('usuario_logueado');
-if (userLogueado) {
+
+// En script.js (Línea 17 aprox)
+const token = localStorage.getItem('usuario_logueado'); // Ya lo tienes así
+if (token) { 
     const displayElement = document.getElementById('nombre-usuario-display');
-    if (userLogueado){
-        displayElement.textContent = userLogueado;
+    if (displayElement) {
+        displayElement.textContent = token;
     }
 }
 
@@ -27,7 +29,7 @@ async function cerrarSesion() {
             method: 'POST',
             credentials: 'include'
         });
-        localStorage.removeItem(usuario_logueado);
+        localStorage.removeItem('usuario_logueado');
         window.location.href = 'index.html'
     }catch (error){
         console.error('Error al cerrar sesión:', error);

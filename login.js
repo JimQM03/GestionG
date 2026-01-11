@@ -2,7 +2,8 @@
 // LOGIN.JS - Manejo de autenticación
 // ================================================
 
-const API_URL = "https://gestiong-production.up.railway.app";
+
+const API_URL = "https://web-production-99037.up.railway.app";
 
 console.log('🔄 Script login.js cargado');
 

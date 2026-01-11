@@ -8,13 +8,16 @@
 </head>
 <body>
     <script>
-       (function verificarSesion() {
-        const token = localStorage.getItem('auth_token');
-        if (!token) {
-            window.location.href = 'index.html';
-            return;
-        }
-        console.log("Sesion iniciada en modo Beta");
+   (function verificarSesion() {
+    // Buscamos 'usuario_logueado' que es lo que realmente guarda tu login.js
+    const session = localStorage.getItem('usuario_logueado'); 
+    
+    if (!session) {
+        console.log("No hay sesión activa, redirigiendo...");
+        window.location.href = 'index.html';
+        return;
+    }
+    console.log("Sesión confirmada para:", session);
     })();
     </script>
     <!-- Encabezado principal -->
