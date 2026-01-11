@@ -45,30 +45,32 @@ def login():
 
     db = conectar_db()
     if not db:
-        return jsonify({"status": "error", "mensaje": "Error de conexión"}), 500
+        return jsonify({"status": "error", "mensaje": "Error de conexión a DB"}), 500
         
-    # Agregamos dictionary=True para no liarnos con user[1] o user[3]
+    # Agregamos dictionary=True para usar nombres de columna
     cursor = db.cursor(dictionary=True)
     
     try:
-        # Buscamos todo el registro del usuario
+        # Buscamos por nombre de usuario
         cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
         user = cursor.fetchone()
         
+        # Ahora Python sabe que user['contrasena'] es el hash, sin importar el orden
         if user and check_password_hash(user['contrasena'], p):
             session['usuario'] = user['nombre_usuario']
             return jsonify({
-                "status": "success",
+                "status": "success", 
                 "usuario": user['nombre_usuario']
             }), 200
         
-        return jsonify({"status": "error", "mensaje": "Usuario o clave incorrectos"}), 401
+        # Si llega aquí, es porque el usuario no existe o la clave no coincide
+        return jsonify({"status": "error", "mensaje": "Usuario o contraseña incorrectos"}), 401
+        
     except Exception as e:
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
         cursor.close()
         db.close()
-
 # --- LOGOUT ---
 @app.route('/logout', methods=['POST'])
 def logout():
