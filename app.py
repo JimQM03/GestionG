@@ -41,20 +41,33 @@ def conectar_db():
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
-    u = data.get('usuario')
-    p = data.get('password')
+    u = data.get('usuario')   # Lo que viene del login.js
+    p = data.get('password')  # Lo que viene del login.js
+
     db = conectar_db()
-    if not db: return jsonify({"status": "error", "mensaje": "Error DB"}), 500
+    if not db:
+        return jsonify({"status": "error", "mensaje": "Error de conexión a DB"}), 500
+        
+    cursor = db.cursor()
     
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
+    # IMPORTANTE: Usamos los nombres exactos que me diste
+    query = "SELECT nombre_usuario, contrasena, id FROM usuarios WHERE nombre_usuario = %s"
+    cursor.execute(query, (u,))
     user = cursor.fetchone()
+    cursor.close()
     db.close()
+
+    if user:
+        # user[1] es la columna 'contrasena' (donde está el hash scrypt...)
+        if check_password_hash(user[1], p):
+            # Guardamos en sesión el nombre del usuario
+            session['usuario'] = user[0] 
+            return jsonify({
+                "status": "success",
+                "usuario": user[0] # Retornamos 'german'
+            }), 200
     
-    if user and check_password_hash(user['contrasena'], p):
-        session['usuario'] = u
-        return jsonify({"status": "success", "usuario": u})
-    return jsonify({"status": "error", "mensaje": "Credenciales incorrectas"}), 401
+    return jsonify({"status": "error", "mensaje": "Usuario o contraseña incorrectos"}), 401
 
 # --- LOGOUT ---
 @app.route('/logout', methods=['POST'])
