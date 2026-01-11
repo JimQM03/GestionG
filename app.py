@@ -52,7 +52,7 @@ def login():
         user = cursor.fetchone()
         
         # COMPARACIÓN DIRECTA (Sin encriptar)
-        if user and user['contrasena'] == p:
+        if user and user.get['contrasena'] == p:
             session['usuario'] = user['nombre_usuario']
             return jsonify({
                 "status": "success", 
@@ -64,8 +64,8 @@ def login():
     except Exception as e:
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        cursor.close()
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 # --- LOGOUT ---
 @app.route('/logout', methods=['POST'])
 def logout():
@@ -94,7 +94,8 @@ def guardar_gasto():
         print(f"Error: {e}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
@@ -105,11 +106,11 @@ def obtener_gastos():
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("SELECT * FROM gastos WHERE usuario = %s ORDER BY fecha DESC", (usuario,))
-        # Corregido "fechall" a "fetchall"
         gastos = cursor.fetchall()
         return jsonify(gastos)
     finally:
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
 # --- GESTIÓN DE INGRESOS ---
 @app.route('/guardar-ingreso', methods=['POST'])
@@ -128,7 +129,8 @@ def guardar_ingreso():
         db.commit()
         return jsonify({"status": "success"})
     finally:
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
 # --- CÁLCULO DE SALDO ---
 @app.route('/calcular-saldo', methods=['GET'])
@@ -137,13 +139,19 @@ def calcular_saldo():
     if not usuario: return jsonify({"error": "No autenticado"}), 401
     
     db = conectar_db()
+    if not db: return jsonify({"error": "Error de cinexión"}), 500
+
     cursor = db.cursor(dictionary=True)
     try:
+        # Suma de ingresos
         cursor.execute("SELECT SUM(monto) as total FROM ingresos WHERE usuario = %s", (usuario,))
-        total_ingresos = cursor.fetchone()['total'] or 0
+        res_i = cursor.fetchone() 
+        total_ingresos = float(res_i['total']) if res_i and res_i['total'] else 0.0
 
+        # Suma de gastos
         cursor.execute("SELECT SUM(valor) as total FROM gastos WHERE usuario = %s", (usuario,))
-        total_gastos = cursor.fetchone()['total'] or 0
+        res_g = cursor.fetchone()
+        total_gastos = float(res_g['total']) if res_g and res_g['total'] else 0.0
 
         return jsonify({
             "status": "success",
@@ -151,8 +159,12 @@ def calcular_saldo():
             "total_ingresos": float(total_ingresos),
             "total_gastos": float(total_gastos)
         })
+    except Exception as e:
+        print(f"Error en saldo: {e}")
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
 @app.route('/eliminar-gasto/<int:id>', methods=['DELETE'])
 def eliminar_gasto(id):
@@ -163,7 +175,8 @@ def eliminar_gasto(id):
     cursor = db.cursor()
     cursor.execute("DELETE FROM gastos WHERE id = %s AND usuario = %s", (id, usuario))
     db.commit()
-    db.close()
+    if cursor: cursor.close()
+    if db: db.close()
     return jsonify({"status": "success"})
 
 # --- ELIMINAR EL HISTORIAL ---
@@ -187,8 +200,8 @@ def eliminar_historial():
         print(f"Error al borrar historial: {e}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        cursor.close()
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
 # SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
