@@ -64,8 +64,8 @@ def login():
     except Exception as e:
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        cursor.close()
+        db.close()
 # --- LOGOUT ---
 @app.route('/logout', methods=['POST'])
 def logout():
@@ -94,8 +94,8 @@ def guardar_gasto():
         print(f"Error: {e}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        cursor.close()
+        db.close()
 
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
@@ -109,8 +109,8 @@ def obtener_gastos():
         gastos = cursor.fetchall()
         return jsonify(gastos)
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        cursor.close()
+        db.close()
 
 # --- GESTIÓN DE INGRESOS ---
 @app.route('/guardar-ingreso', methods=['POST'])
@@ -129,8 +129,8 @@ def guardar_ingreso():
         db.commit()
         return jsonify({"status": "success"})
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        cursor.close()
+        db.close()
 
 # --- CÁLCULO DE SALDO ---
 @app.route('/calcular-saldo', methods=['GET'])
@@ -163,8 +163,8 @@ def calcular_saldo():
         print(f"Error en saldo: {e}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        cursor.close()
+        db.close()
 
 @app.route('/eliminar-gasto/<int:id>', methods=['DELETE'])
 def eliminar_gasto(id):
@@ -175,8 +175,8 @@ def eliminar_gasto(id):
     cursor = db.cursor()
     cursor.execute("DELETE FROM gastos WHERE id = %s AND usuario = %s", (id, usuario))
     db.commit()
-    if cursor: cursor.close()
-    if db: db.close()
+    cursor.close()
+    db.close()
     return jsonify({"status": "success"})
 
 # --- ELIMINAR EL HISTORIAL ---
@@ -200,8 +200,8 @@ def eliminar_historial():
         print(f"Error al borrar historial: {e}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        cursor.close()
+        db.close()
 
 # SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
