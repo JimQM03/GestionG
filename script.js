@@ -4,7 +4,10 @@
 
 // URL de tu backend en Railway
 const API_URL = "https://web-production-99037.up.railway.app";
-const fetchConfig = { credentials: 'include' };
+const fetchConfig = { 
+    credentials: 'include',
+    headers: {'Content-Type': 'application/json'}
+};
 
 
 // ================================================
@@ -359,6 +362,7 @@ async function guardarGastoEnBaseDeDatos(descripcion, valor, fechaManual) {
 
         const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
             method: "POST",
+            credentials: 'include',
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(datosGasto)
         });
@@ -582,7 +586,9 @@ async function cargarHistorial() {
     if (!cuerpoTabla) return;
 
     try {
-        const respuesta = await fetch(`${API_URL}/obtener-gastos`);
+        const respuesta = await fetch(`${API_URL}/obtener-gastos`, {
+            credentials: 'include'
+        });
         
         // Verificar si la respuesta es exitosa
         if (!respuesta.ok) {
@@ -642,7 +648,9 @@ async function cargarHistorial() {
 // ================================================
 async function obtenerSaldoGlobal() {
     try{
-        const res = await fetch(`${API_URL}/calcular-saldo`);
+        const res = await fetch(`${API_URL}/calcular-saldo`, {
+            credentials: 'include'
+        });
         // Si no es 200 OK, no intentamos leer el JSON
         if(!res.ok){
             console.warn("EL endpoint /calcular-saldo aún no esta disponible en el servidor.");

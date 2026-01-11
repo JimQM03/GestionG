@@ -10,7 +10,12 @@ app = Flask(__name__)
 app.secret_key = 'JQ_2026_RM'
 # Configuración corregida (SIN rutas, solo dominios)
 
-
+# --- Configuración de cookies
+app.config.update(
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_SECURE=True, # Obligatorio para que funcione con HTTPS (Railway)
+    SESSION_COOKIE_HTTPONLY=True
+)
 # En app.py
 CORS(app, 
      resources={r"/*": {
@@ -20,6 +25,12 @@ CORS(app,
          ]
      }}, 
      supports_credentials=True)
+
+# Manejador global para encabezados
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # --- CONEXIÓN A DB ---
 def conectar_db():
