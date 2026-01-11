@@ -52,7 +52,7 @@ def login():
         user = cursor.fetchone()
         
         # COMPARACIÓN DIRECTA (Sin encriptar)
-        if user and user.get['contrasena'] == p:
+        if user and user.get('contrasena') == p:
             session['usuario'] = user['nombre_usuario']
             return jsonify({
                 "status": "success", 
