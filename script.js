@@ -3,7 +3,7 @@
 // ================================================
 
 // URL de tu backend en Railway
-const API_URL = "https://gestiong-production.up.railway.app";
+const API_URL = "https://web-production-99037.up.railway.ap";
 const fetchConfig = { credentials: 'include' };
 
 
@@ -12,7 +12,8 @@ const fetchConfig = { credentials: 'include' };
 // ================================================
 
 // Mostrar usuario logueado
-const userLogueado = localStorage.getItem('usuario_logueado');
+
+const token = localStorage.getItem('usuario_logueado');
 if (userLogueado) {
     const displayElement = document.getElementById('nombre-usuario-display');
     if (userLogueado){
