@@ -7,7 +7,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 # Configuración de CORS corregida HOLA EZQUISO
-
+app.secret_key = 'JQ_2026_RM'
 # Configuración corregida (SIN rutas, solo dominios)
 
 
