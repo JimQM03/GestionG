@@ -41,29 +41,24 @@ def conectar_db():
 def login():
     data = request.json
     u = data.get('usuario')
-    p = data.get('password')
+    p = data.get('password') # Contraseña que escribes en la web
 
     db = conectar_db()
-    if not db:
-        return jsonify({"status": "error", "mensaje": "Error de conexión a DB"}), 500
-        
-    # Agregamos dictionary=True para usar nombres de columna
     cursor = db.cursor(dictionary=True)
     
     try:
-        # Buscamos por nombre de usuario
+        # Buscamos al usuario
         cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
         user = cursor.fetchone()
         
-        # Ahora Python sabe que user['contrasena'] es el hash, sin importar el orden
-        if user and check_password_hash(user['contrasena'], p):
+        # COMPARACIÓN DIRECTA (Sin encriptar)
+        if user and user['contrasena'] == p:
             session['usuario'] = user['nombre_usuario']
             return jsonify({
                 "status": "success", 
                 "usuario": user['nombre_usuario']
             }), 200
         
-        # Si llega aquí, es porque el usuario no existe o la clave no coincide
         return jsonify({"status": "error", "mensaje": "Usuario o contraseña incorrectos"}), 401
         
     except Exception as e:
