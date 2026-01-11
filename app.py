@@ -40,41 +40,34 @@ def conectar_db():
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
-    u = data.get('usuario')   # Viene de login.js
-    p = data.get('password')  # Viene de login.js
+    u = data.get('usuario')
+    p = data.get('password')
 
     db = conectar_db()
     if not db:
-        return jsonify({"status": "error", "mensaje": "Error de conexión a la base de datos"}), 500
+        return jsonify({"status": "error", "mensaje": "Error de conexión"}), 500
         
-    cursor = db.cursor()
+    # Agregamos dictionary=True para no liarnos con user[1] o user[3]
+    cursor = db.cursor(dictionary=True)
     
-    # IMPORTANTE: Forzamos el orden para que la contraseña esté en el índice [3]
-    # Posiciones:     0        1                 2                    3
-    query = "SELECT id, nombre_usuario, email_notificaciones, contrasena FROM usuarios WHERE nombre_usuario = %s"
-    
-    cursor.execute(query, (u,))
-    user = cursor.fetchone() # Trae la fila como una lista/tupla
-    
-    cursor.close()
-    db.close()
-
-    if user:
-        # user[3] es 'contrasena' según nuestro SELECT de arriba
-        if check_password_hash(user[3], p):
-            # Guardamos en la sesión el nombre (user[1])
-            session['usuario'] = user[1] 
-            
+    try:
+        # Buscamos todo el registro del usuario
+        cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
+        user = cursor.fetchone()
+        
+        if user and check_password_hash(user['contrasena'], p):
+            session['usuario'] = user['nombre_usuario']
             return jsonify({
                 "status": "success",
-                "usuario": user[1]
+                "usuario": user['nombre_usuario']
             }), 200
-        else:
-            # Si entra aquí, la contraseña plana 'p' no coincide con el hash user[3]
-            return jsonify({"status": "error", "mensaje": "Contraseña incorrecta"}), 401
-    
-    # Si no encuentra al usuario 'u'
-    return jsonify({"status": "error", "mensaje": "Usuario no encontrado"}), 401
+        
+        return jsonify({"status": "error", "mensaje": "Usuario o clave incorrectos"}), 401
+    except Exception as e:
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
 
 # --- LOGOUT ---
 @app.route('/logout', methods=['POST'])
