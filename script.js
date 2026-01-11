@@ -388,6 +388,7 @@ async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
 
         const respuesta = await fetch(`${API_URL}/guardar-ingreso`, {
             method: "POST",
+            credentials: 'include',
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(datosIngreso)
         });
@@ -470,7 +471,10 @@ async function confirmarEliminar(id) {
         try{
             modal.classList.add("modal-hidden");
 
-            const res = await fetch(`${API_URL}/eliminar-gasto/${id}`,{method: 'DELETE'});
+            const res = await fetch(`${API_URL}/eliminar-gasto/${id}`,{
+                credentials: 'include',
+                method: 'DELETE'
+            });
             if (res.ok){
                 mostrarNotificacion("Gasto eliminado", "success");
                 await cargarHistorial(); // Recargamos la tabla

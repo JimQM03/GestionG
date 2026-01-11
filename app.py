@@ -17,20 +17,9 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True
 )
 # En app.py
-CORS(app, 
-     resources={r"/*": {
-         "origins": [
-             "https://jimqm03.github.io", 
-             "https://jimqm03.github.io/GestionG"
-         ]
-     }}, 
-     supports_credentials=True)
-
-# Manejador global para encabezados
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
+CORS(app,
+     supports_credentials=True,
+     origins=["https://jimqm03.github.io",])
 
 # --- CONEXIÓN A DB ---
 def conectar_db():
