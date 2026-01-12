@@ -607,7 +607,7 @@ async function cargarHistorial() {
             return;
         }
 
-        const gastos = await respuesta.json();
+        const gastos = await respuesta.json() || [];
 
         actualizarGrafico(gastos);
 
