@@ -15,23 +15,9 @@ function inicializarLogin() {
     const inputUsuario = document.getElementById('usuario');
     const inputPassword = document.getElementById('password');
 
-    console.log('Form:', loginForm);
-    console.log('Usuario input:', inputUsuario);
-    console.log('Password input:', inputPassword);
-
     // Verificamos que los elementos existan
-    if (!loginForm) {
-        console.error('❌ No se encontró el formulario con id="formLogin"');
-        return;
-    }
-    
-    if (!inputUsuario) {
-        console.error('❌ No se encontró el input con id="usuario"');
-        return;
-    }
-    
-    if (!inputPassword) {
-        console.error('❌ No se encontró el input con id="password"');
+    if (!loginForm || !inputUsuario || !inputPassword) {
+        console.error('❌ Error: No se encontraron los elementos del formulario');
         return;
     }
 
@@ -56,13 +42,14 @@ function inicializarLogin() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ usuario, password }),
-                credentials: 'include' 
             });
 
             const data = await response.json();
 
             if (data.status === 'success') {
                 console.log('✅ Login exitoso');
+                // Guardar token y usuario
+                localStorage.setItem('token', data.token);
                 localStorage.setItem('usuario_logueado', usuario);
                 window.location.href = 'Main.html';
             } else {

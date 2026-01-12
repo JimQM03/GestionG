@@ -4,10 +4,15 @@
 
 // URL de tu backend en Railway
 const API_URL = "https://web-production-99037.up.railway.app";
-const fetchConfig = { 
-    credentials: 'include',
-    headers: {'Content-Type': 'application/json'}
-};
+
+// Función helper para obtener headers con token
+function getAuthHeaders(){
+    const token = localStorage.getItem('token');
+    return{
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+}
 
 
 // ================================================
@@ -15,8 +20,6 @@ const fetchConfig = {
 // ================================================
 
 // Mostrar usuario logueado
-
-// En script.js (Línea 17 aprox)
 const token = localStorage.getItem('usuario_logueado'); // Ya lo tienes así
 if (token) { 
     const displayElement = document.getElementById('nombre-usuario-display');
@@ -30,16 +33,14 @@ async function cerrarSesion() {
     try {
         await fetch(`${API_URL}/logout`,{
             method: 'POST',
-            credentials: 'include'
+            headers: getAuthHeaders()
         });
-        localStorage.removeItem('usuario_logueado');
-        window.location.href = 'index.html'
     }catch (error){
         console.error('Error al cerrar sesión:', error);
-        // Igual redirigimos aunque falle el servidor
-        localStorage.removeItem('usuario_logueado');
-        window.location.href = 'index.html';
     }
+    localStorage.removeItem('usuario_logueado');
+    localStorage.removeItem('token');
+    window.location.href = 'index.html';
 }
 
 // ================================================
@@ -209,7 +210,7 @@ if (modalConfirmar) {
             // Llamamos al servidor para borrar la DB de Railway
             const respuesta = await fetch(`${API_URL}/eliminar-historial`,{
                 method: 'DELETE',
-                credentials: 'include'
+                headers: getAuthHeaders()
             });
             const resultado = await respuesta.json();
 
@@ -362,8 +363,7 @@ async function guardarGastoEnBaseDeDatos(descripcion, valor, fechaManual) {
 
         const respuesta = await fetch(`${API_URL}/guardar-gasto`, {
             method: "POST",
-            credentials: 'include',
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify(datosGasto)
         });
 
@@ -388,8 +388,7 @@ async function guardarIngresoEnBaseDeDatos(monto, clases, descripcion) {
 
         const respuesta = await fetch(`${API_URL}/guardar-ingreso`, {
             method: "POST",
-            credentials: 'include',
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify(datosIngreso)
         });
 
@@ -472,7 +471,7 @@ async function confirmarEliminar(id) {
             modal.classList.add("modal-hidden");
 
             const res = await fetch(`${API_URL}/eliminar-gasto/${id}`,{
-                credentials: 'include',
+                headers: getAuthHeaders(),
                 method: 'DELETE'
             });
             if (res.ok){
@@ -591,7 +590,7 @@ async function cargarHistorial() {
 
     try {
         const respuesta = await fetch(`${API_URL}/obtener-gastos`, {
-            credentials: 'include'
+            headers: getAuthHeaders(),
         });
         
         // Verificar si la respuesta es exitosa
@@ -653,7 +652,7 @@ async function cargarHistorial() {
 async function obtenerSaldoGlobal() {
     try{
         const res = await fetch(`${API_URL}/calcular-saldo`, {
-            credentials: 'include'
+            headers: getAuthHeaders(),
         });
         // Si no es 200 OK, no intentamos leer el JSON
         if(!res.ok){

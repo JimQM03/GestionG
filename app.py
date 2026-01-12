@@ -1,21 +1,15 @@
 import os
 import mysql.connector
-from flask import Flask, request, jsonify, session
+import jwt
+from datetime import datetime; timedelta
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from functools import wraps
 
 app = Flask(__name__)
 # Configuración de CORS corregida HOLA EZQUISO
 app.secret_key = 'JQ_2026_RM'
-# Configuración corregida (SIN rutas, solo dominios)
 
-# --- Configuración de cookies
-app.config.update(
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_SECURE=True, # Obligatorio para que funcione con HTTPS (Railway)
-    SESSION_COOKIE_HTTPONLY=True
-)
 # En app.py
 CORS(app,
      supports_credentials=True,
@@ -36,7 +30,36 @@ def conectar_db():
         print(f"❌ Error de conexión DB: {e}")
         return None
 
-# --- LOGIN ----
+# --- DECORADOR PARA PROTEGER RUTAS ---
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+
+        if not token:
+            print("❌ No se envió token")
+            return jsonify({"error": "Token faltante"}), 401
+        
+        try:
+            # Quitar "Bearer " si existe
+            if token.startswith('Bearer '):
+                token = token[7:]
+
+                data = jwt.decode(token, app.secret_key, algorithms=["HS256"])
+                current_user = data['usuario']
+                print(f"✅ Token válido para: {current_user}")
+        except jwt.ExpiredSignatureError:
+            print("❌ Token expirado")
+            return jsonify({"error": "Token expirado"}), 401
+        except jwt.InvalidTokenError:
+            print("❌ Token inválido")
+            return jsonify({"error": "Token invalido"}), 401
+        
+        return f(current_user, *args, **kwargs)
+    
+    return decorated
+
+# --- LOGIN (genera token) ----
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -56,11 +79,17 @@ def login():
         
         # COMPARACIÓN DIRECTA (Sin encriptar)
         if user and user.get('contrasena') == p:
-            session['usuario'] = user['nombre_usuario']
+            # Generar token JWT
+            token = jwt.encode({
+                'usuario': user['nombre_usuario'],
+                'exp': datetime.utcnow() + timedelta(hours=24)
+            }, app.secret_key, algorithm="HS256")
+
             print(f"✅ Login exitoso para: {user['nombre_usuario']}")
             return jsonify({
                 "status": "success", 
-                "usuario": user['nombre_usuario']
+                "usuario": user['nombre_usuario'],
+                "token": token
             }), 200
         
         print(f"❌ Login fallido para usuario: {u}")
@@ -75,17 +104,12 @@ def login():
 # --- LOGOUT ---
 @app.route('/logout', methods=['POST'])
 def logout():
-    session.pop('usuario', None)
     return jsonify({"status": "success"})
 
-# --- GESTIÓN DE GASTOS ---
+# --- GUARDAR GASTO ---
 @app.route('/guardar-gasto', methods=['POST'])
-def guardar_gasto():
-    usuario = session.get('usuario')
-    if not usuario:
-        print("❌ Intento sin autenticación")
-        return jsonify({"error": "No autenticado"}), 401
-    
+@token_required
+def guardar_gasto(current_user):    
     data = request.json
     db = conectar_db()
     if not db:
@@ -96,7 +120,7 @@ def guardar_gasto():
         print(f"💾 Guardando gasto para usuario: {usuario}")
         cursor.execute(
             "INSERT INTO gastos (usuario, nombre, valor, prioridad, fecha) VALUES (%s, %s, %s, %s, %s)",
-            (usuario, data['nombre'], data['valor'], data.get('prioridad', 'Media'), data['fecha'])
+            (current_user, data['nombre'], data['valor'], data.get('prioridad', 'Media'), data['fecha'])
         )
         db.commit()
         print(f"✅ Gasto guardado: {data['nombre']} - ${data['valor']}")
@@ -108,22 +132,18 @@ def guardar_gasto():
         cursor.close()
         db.close()
 
-# --OBTENER GASTOS
+# --- OBTENER GASTOS ---
 @app.route('/obtener-gastos', methods=['GET'])
-def obtener_gastos():
-    usuario = session.get('usuario')
-    if not usuario:
-        print("❌ Intento de obtener gastos sin autenticación")
-        return jsonify({"error": "No autenticado"}), 401
-    
+@token_required
+def obtener_gastos(current_user):
     db = conectar_db()
     if not db:
         return jsonify({"error": "Error de conexión"}), 500
     
     cursor = db.cursor(dictionary=True)
     try:
-        print(f"📊 Obteniendo gastos para: {usuario}")
-        cursor.execute("SELECT * FROM gastos WHERE usuario = %s ORDER BY fecha DESC", (usuario,))
+        print(f"📊 Obteniendo gastos para: {current_user}")
+        cursor.execute("SELECT * FROM gastos WHERE usuario = %s ORDER BY fecha DESC", (current_user,))
         gastos = cursor.fetchall()
         print(f"✅ Se encontraron {len(gastos)} gastos")
         return jsonify(gastos)
@@ -134,12 +154,10 @@ def obtener_gastos():
         cursor.close()
         db.close()
 
-# --- GESTIÓN DE INGRESOS ---
+# --- GUARDAR INGRESO ---
 @app.route('/guardar-ingreso', methods=['POST'])
-def guardar_ingreso():
-    usuario = session.get('usuario')
-    if not usuario: return jsonify({"error": "No autenticado"}), 401
-    
+@token_required
+def guardar_ingreso(current_user):
     data = request.json
     db = conectar_db()
     if not db:
@@ -147,10 +165,10 @@ def guardar_ingreso():
     
     cursor = db.cursor()
     try:
-        print(f"💰 Guardando ingreso para: {usuario}")
+        print(f"💰 Guardando ingreso para: {current_user}")
         cursor.execute(
             "INSERT INTO ingresos (usuario, monto, clases, descripcion, fecha) VALUES (%s, %s, %s, %s, %s)",
-            (usuario, data['monto'], data.get('clases', 0), data.get('descripcion', ''), datetime.now().date())
+            (current_user, data['monto'], data.get('clases', 0), data.get('descripcion', ''), datetime.now().date())
         )
         db.commit()
         print(f"✅ Ingreso guardado: ${data['monto']}")
@@ -164,27 +182,24 @@ def guardar_ingreso():
 
 # --- CÁLCULO DE SALDO ---
 @app.route('/calcular-saldo', methods=['GET'])
-def calcular_saldo():
-    usuario = session.get('usuario')
-    if not usuario:
-        print("❌ Intento de calcular saldo sin autenticación")
-        return jsonify({"error": "No autenticado"}), 401
-    
+@token_required
+def calcular_saldo(current_user):
     db = conectar_db()
-    if not db: return jsonify({"error": "Error de conexión"}), 500
+    if not db:
+        return jsonify({"error": "Error de conexión"}), 500
 
     cursor = db.cursor(dictionary=True)
     try:
         print(f"🧮 Calculando saldo para: {usuario}")
 
         # Suma de ingresos
-        cursor.execute("SELECT SUM(monto) as total FROM ingresos WHERE usuario = %s", (usuario,))
+        cursor.execute("SELECT SUM(monto) as total FROM ingresos WHERE usuario = %s", (current_user,))
         res_i = cursor.fetchone() 
         total_ingresos = float(res_i['total']) if res_i and res_i['total'] else 0.0
         print(f"  📈 Total ingresos: ${total_ingresos}")
 
         # Suma de gastos
-        cursor.execute("SELECT SUM(valor) as total FROM gastos WHERE usuario = %s", (usuario,))
+        cursor.execute("SELECT SUM(valor) as total FROM gastos WHERE usuario = %s", (current_user,))
         res_g = cursor.fetchone()
         total_gastos = float(res_g['total']) if res_g and res_g['total'] else 0.0
         print(f"  📉 Total gastos: ${total_gastos}")
@@ -199,7 +214,7 @@ def calcular_saldo():
             "total_gastos": float(total_gastos)
         })
     except Exception as e:
-        print(f"❌ Error en saldo: {e}")
+        print(f"❌ Error en calcular saldo: {e}")
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
         cursor.close()
@@ -207,18 +222,16 @@ def calcular_saldo():
 
 # --- ELIMINAR GASTO ---
 @app.route('/eliminar-gasto/<int:id>', methods=['DELETE'])
-def eliminar_gasto(id):
-    usuario = session.get('usuario')
-    if not usuario: return jsonify({"error": "No autenticado"}), 401
-    
+@token_required
+def eliminar_gasto(current_user, id):    
     db = conectar_db()
     if not db:
         return jsonify({"status": "error"}), 500
     
     cursor = db.cursor()
     try:
-        print(f"🗑️ Eliminando gasto ID:{id} para usuario: {usuario}")
-        cursor.execute("DELETE FROM gastos WHERE id = %s AND usuario = %s", (id, usuario))
+        print(f"🗑️ Eliminando gasto ID:{id} para usuario: {current_user}")
+        cursor.execute("DELETE FROM gastos WHERE id = %s AND usuario = %s", (id, current_user))
         db.commit()
         print(f"✅ Gasto eliminado")
         return jsonify({"status": "success"})
@@ -231,20 +244,17 @@ def eliminar_gasto(id):
     
 # --- ELIMINAR EL HISTORIAL ---
 @app.route('/eliminar-historial', methods=['DELETE'])
-def eliminar_historial():
-    usuario = session.get('usuario')
-    if not usuario: 
-        return jsonify({"error": "No autenticado"}), 401
-    
+@token_required
+def eliminar_historial(current_user): 
     db = conectar_db()
     if not db: 
         return jsonify({"status": "error", "mensaje": "Error de conexión"}), 500
     
     cursor = db.cursor()
     try:
-        print(f"🗑️ Eliminando TODO el historial de: {usuario}")
+        print(f"🗑️ Eliminando TODO el historial de: {current_user}")
         # Eliminamos solo los gastos que pertenecen al usuario logueado
-        cursor.execute("DELETE FROM gastos WHERE usuario = %s", (usuario,))
+        cursor.execute("DELETE FROM gastos WHERE usuario = %s", (current_user,))
         db.commit()
         print(f"✅ Historial borrado completamente")
         return jsonify({"status": "success", "mensaje": "Historial borrado en DB"})
@@ -258,10 +268,10 @@ def eliminar_historial():
 # --- RUTA RAÍZ (PARA VERIFICAR QUE EL SERVIDOR ESTÁ VIVO) ---
 @app.route('/')
 def index():
-    return "<h1>✅ Servidor GestionG funcionando</h1><p>Backend activo y listo</p>"
+    return "<h1>✅ Servidor GestionG funcionando</h1><p>Backend con JWT activo</p>"
 
 # SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
-    print("🚀 Iniciando servidor GestionG...")
+    print("🚀 Iniciando servidor GestionG con autenticación JWT....")
     port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_ENV') == 'development')
+    app.run(host='0.0.0.0', port=port, debug=False)
