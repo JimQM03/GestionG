@@ -19,7 +19,7 @@ function inicializarLogin() {
     console.log('Usuario input:', inputUsuario);
     console.log('Password input:', inputPassword);
 
-    // Verificamos que los elementos existan
+    // Verificamos que los elementos exista
     if (!loginForm) {
         console.error('❌ No se encontró el formulario con id="formLogin"');
         return;

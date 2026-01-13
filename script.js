@@ -607,7 +607,7 @@ async function cargarHistorial() {
 
         gastos.forEach(gasto => {
             // Sumamos el valor de cada gasto traído de la base de datos
-            //hola
+            
             const valorNumerico = parseFloat(gasto.valor) || 0;
             sumaTotal += valorNumerico;
 

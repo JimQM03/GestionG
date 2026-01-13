@@ -1,5 +1,4 @@
 import os
-import mysql.connector
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -8,12 +7,20 @@ import psycopg2
 
 
 app = Flask(__name__)
-# Configuración de CORS corregida HOLA EZQUISO
+# Configuración de CORS corregida HOLA 
 # Oontraseña cri-2026-jim
 #CONECCION CON SUPABASE
 from dotenv import load_dotenv
 load_dotenv()
 
+#PRUEBA DE CONEXION AL SERVIDOR
+@app.route("/test-db")
+def test_db():
+    conn = conectar_db()
+    if conn:
+        conn.close()
+        return {"status": "OK", "db": "connected"}
+    return {"status": "ERROR"}
 
 
 # En app.py
@@ -31,14 +38,16 @@ def conectar_db():
     try:
         return psycopg2.connect(
             host=os.environ.get("DB_HOST"),
-            database=os.environ.get("DB_NAME"),
+            dbname=os.environ.get("DB_NAME"),
             user=os.environ.get("DB_USER"),
             password=os.environ.get("DB_PASSWORD"),
-            port=os.environ.get("DB_PORT", 5432)
+            port=int(os.environ.get("DB_PORT", 5432)),
+            sslmode="require"
         )
     except Exception as e:
         print("❌ Error DB:", e)
         return None
+
 
 
 # --- LOGIN ----
