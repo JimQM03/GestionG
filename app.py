@@ -8,10 +8,23 @@ import psycopg2
 
 app = Flask(__name__)
 # Configuración de CORS corregida HOLA 
-# Oontraseña cri-2026-jim
+app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
+# Oontraseña cri-2026-jim (solo para desarrolladores)
 #CONECCION CON SUPABASE
 from dotenv import load_dotenv
 load_dotenv()
+
+# CORS
+CORS(app, 
+     resources={r"/*": {
+         "origins": [
+             "https://jimqm03.github.io", 
+             "https://jimqm03.github.io/GestionG",
+             "http://localhost:5500",  # Para desarrollo local
+             "http://localhost:8000"   # Para desarrollo local alternativo
+         ]
+     }}, 
+     supports_credentials=True)
 
 #PRUEBA DE CONEXION AL SERVIDOR
 @app.route("/test-db")
@@ -29,15 +42,6 @@ def test_db():
 
 
 
-# En app.py
-CORS(app, 
-     resources={r"/*": {
-         "origins": [
-             "https://jimqm03.github.io", 
-             "https://jimqm03.github.io/GestionG"
-         ]
-     }}, 
-     supports_credentials=True)
 
 # --- CONEXIÓN A DB ---
 def conectar_db():
