@@ -16,11 +16,17 @@ load_dotenv()
 #PRUEBA DE CONEXION AL SERVIDOR
 @app.route("/test-db")
 def test_db():
-    conn = conectar_db()
-    if conn:
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+        cur.execute("SELECT 1;")
+        cur.close()
         conn.close()
         return {"status": "OK", "db": "connected"}
-    return {"status": "ERROR"}
+    except Exception as e:
+        print("❌ TEST DB ERROR:", e)
+        return {"status": "ERROR", "message": str(e)}, 500
+
 
 
 # En app.py
