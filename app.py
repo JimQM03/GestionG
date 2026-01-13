@@ -4,11 +4,16 @@ from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import psycopg2
+
 
 app = Flask(__name__)
 # Configuración de CORS corregida HOLA EZQUISO
+# Oontraseña cri-2026-jim
+#CONECCION CON SUPABASE
+from dotenv import load_dotenv
+load_dotenv()
 
-# Configuración corregida (SIN rutas, solo dominios)
 
 
 # En app.py
@@ -24,17 +29,17 @@ CORS(app,
 # --- CONEXIÓN A DB ---
 def conectar_db():
     try:
-        return mysql.connector.connect(
-            host="nozomi.proxy.rlwy.net",
-            user="root",
-            password="egddxkxJxQTroZyaHVvEGdZJSAsFFiTS",
-            database="railway",
-            port=32514,
-            connect_timeout=10
+        return psycopg2.connect(
+            host=os.environ.get("DB_HOST"),
+            database=os.environ.get("DB_NAME"),
+            user=os.environ.get("DB_USER"),
+            password=os.environ.get("DB_PASSWORD"),
+            port=os.environ.get("DB_PORT", 5432)
         )
     except Exception as e:
-        print(f"Error de conexión DB: {e}")
+        print("❌ Error DB:", e)
         return None
+
 
 # --- LOGIN ----
 @app.route('/login', methods=['POST'])
@@ -99,17 +104,43 @@ def guardar_gasto():
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
     usuario = session.get('usuario')
-    if not usuario: return jsonify({"error": "No autenticado"}), 401
-    
+    if not usuario:
+        return jsonify({"error": "No autenticado"}), 401
+
     db = conectar_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
+
     try:
-        cursor.execute("SELECT * FROM gastos WHERE usuario = %s ORDER BY fecha DESC", (usuario,))
-        # Corregido "fechall" a "fetchall"
+        cursor.execute(
+            "SELECT id, usuario, nombre, valor, prioridad, fecha "
+            "FROM gastos WHERE usuario = %s ORDER BY fecha DESC",
+            (usuario,)
+        )
+
         gastos = cursor.fetchall()
-        return jsonify(gastos)
+
+        gastos_json = [
+            {
+                "id": g[0],
+                "usuario": g[1],
+                "nombre": g[2],
+                "valor": float(g[3]),
+                "prioridad": g[4],
+                "fecha": str(g[5])
+            }
+            for g in gastos
+        ]
+
+        return jsonify(gastos_json)
+
+    except Exception as e:
+        print("Error obteniendo gastos:", e)
+        return jsonify({"error": "Error interno"}), 500
+
     finally:
+        cursor.close()
         db.close()
+
 
 # --- GESTIÓN DE INGRESOS ---
 @app.route('/guardar-ingreso', methods=['POST'])
