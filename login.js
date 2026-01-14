@@ -2,8 +2,8 @@
 // LOGIN.JS - Manejo de autenticación
 // ================================================
 
-
-const API_URL = "https://web-production-99037.up.railway.app";
+//hola
+const API_URL = "https://gestiong-backend.onrender.com";
 
 console.log('🔄 Script login.js cargado');
 
@@ -15,9 +15,23 @@ function inicializarLogin() {
     const inputUsuario = document.getElementById('usuario');
     const inputPassword = document.getElementById('password');
 
-    // Verificamos que los elementos existan
-    if (!loginForm || !inputUsuario || !inputPassword) {
-        console.error('❌ Error: No se encontraron los elementos del formulario');
+    console.log('Form:', loginForm);
+    console.log('Usuario input:', inputUsuario);
+    console.log('Password input:', inputPassword);
+
+    // Verificamos que los elementos exista
+    if (!loginForm) {
+        console.error('❌ No se encontró el formulario con id="formLogin"');
+        return;
+    }
+    
+    if (!inputUsuario) {
+        console.error('❌ No se encontró el input con id="usuario"');
+        return;
+    }
+    
+    if (!inputPassword) {
+        console.error('❌ No se encontró el input con id="password"');
         return;
     }
 

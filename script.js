@@ -3,16 +3,9 @@
 // ================================================
 
 // URL de tu backend en Railway
-const API_URL = "https://web-production-99037.up.railway.app";
 
-// Función helper para obtener headers con token
-function getAuthHeaders(){
-    const token = localStorage.getItem('token');
-    return{
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-    };
-}
+const API_URL = "https://gestiong-backend.onrender.com";
+const fetchConfig = { credentials: 'include' };
 
 
 // ================================================
@@ -616,6 +609,7 @@ async function cargarHistorial() {
 
         gastos.forEach(gasto => {
             // Sumamos el valor de cada gasto traído de la base de datos
+            
             const valorNumerico = parseFloat(gasto.valor) || 0;
             sumaTotal += valorNumerico;
 
