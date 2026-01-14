@@ -26,35 +26,50 @@ CORS(app,
 # --- CONEXIÓN A SUPABASE CON psycopg (v3.x) ---
 def conectar_db():
     try:
-        # Usar DATABASE_URL si existe
-        database_url = os.environ.get("DATABASE_URL")
+        # DEBUG: Imprimir valores para ver qué hay
+        db_host = os.environ.get("DB_HOST", "db.uxzhjsmhbsemuvhragmc.supabase.co")
+        db_name = os.environ.get("DB_NAME", "postgres")
+        db_user = os.environ.get("DB_USER", "postgres")
+        db_pass = os.environ.get("DB_PASSWORD")
+        db_port = os.environ.get("DB_PORT", "5432")
         
-        if database_url:
-            # Si empieza con postgres://, cambiarlo a postgresql://
-            if database_url.startswith("postgres://"):
-                database_url = database_url.replace("postgres://", "postgresql://", 1)
-            
-            conn = psycopg.connect(
-                database_url,
-                autocommit=False
-            )
-        else:
-            # Usar variables separadas
-            conn = psycopg.connect(
-                host=os.environ.get("DB_HOST"),
-                dbname=os.environ.get("DB_NAME"),
-                user=os.environ.get("DB_USER"),
-                password=os.environ.get("DB_PASSWORD"),
-                port=int(os.environ.get("DB_PORT", 5432)),
-                autocommit=False
-            )
+        print(f"🔧 Intentando conectar a Supabase:")
+        print(f"   Host: {db_host}")
+        print(f"   DB: {db_name}")
+        print(f"   User: {db_user}")
+        print(f"   Port: {db_port}")
+        print(f"   Password set: {'SÍ' if db_pass else 'NO'}")
         
-        print("✅ Conexión exitosa a Supabase con psycopg v3")
+        # CONEXIÓN DIRECTA CON PARÁMETROS CORRECTOS
+        conn = psycopg.connect(
+            host=db_host,
+            dbname=db_name,
+            user=db_user,
+            password=db_pass,
+            port=int(db_port),
+            # Parámetros críticos para Supabase
+            sslmode="require",
+            sslrootcert="system",  # Usar certificados del sistema
+            target_session_attrs="read-write"
+        )
+        
+        print("✅ Conexión exitosa a Supabase PostgreSQL")
         return conn
+        
     except Exception as e:
-        print(f"❌ Error DB: {e}")
+        print(f"❌ Error DB DETALLADO: {type(e).__name__}")
+        print(f"   Mensaje: {str(e)}")
+        
+        # Información adicional para debug
+        import socket
+        try:
+            # Intentar resolver el hostname
+            ip = socket.gethostbyname(db_host)
+            print(f"   🔍 {db_host} resuelve a IP: {ip}")
+        except:
+            print(f"   🔍 No se puede resolver {db_host}")
+            
         return None
-
 # --- LOGIN (psycopg v3.x) ---
 @app.route('/login', methods=['POST'])
 def login():
@@ -343,9 +358,58 @@ def home():
             "/login", "/logout", "/test-db",
             "/guardar-gasto", "/obtener-gastos",
             "/guardar-ingreso", "/calcular-saldo",
-            "/eliminar-gasto", "/eliminar-historial"
+            "/eliminar-gasto", "/eliminar-historial"        
         ]
     }), 200
+
+@app.route('/debug-supabase', methods=['GET'])
+def debug_supabase():
+    """Endpoint para debug específico de Supabase"""
+    import socket
+    
+    host = "db.uxzhjsmhbsemuvhragmc.supabase.co"
+    port = 5432
+    
+    try:
+        # Test de resolución DNS
+        ip = socket.gethostbyname(host)
+        
+        # Test de conexión TCP
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex((ip, port))
+        sock.close()
+        
+        return jsonify({
+            "status": "debug",
+            "supabase_host": host,
+            "resolved_ip": ip,
+            "port": port,
+            "tcp_connection": "reachable" if result == 0 else "unreachable",
+            "error_code": result,
+            "env_vars": {
+                "DB_HOST": os.environ.get("DB_HOST"),
+                "DB_USER": os.environ.get("DB_USER"),
+                "DB_PASSWORD_set": bool(os.environ.get("DB_PASSWORD")),
+                "DB_PORT": os.environ.get("DB_PORT", 5432)
+            },
+            "message": "✅ Host resuelve correctamente" if result == 0 else "❌ No se puede conectar"
+        })
+        
+    except socket.gaierror as e:
+        return jsonify({
+            "status": "error",
+            "error": "DNS resolution failed",
+            "message": str(e),
+            "host": host
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": type(e).__name__,
+            "message": str(e)
+        }), 500
+    
 
 # SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
