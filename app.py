@@ -1,81 +1,60 @@
 import os
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
-from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-import psycopg2
-
-
-app = Flask(__name__)
-# Configuración de CORS corregida HOLA 
-app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
-# Oontraseña cri-2026-jim (solo para desarrolladores)
-#CONECCION CON SUPABASE
+import psycopg  # ← CAMBIADO
+from psycopg import sql  # ← CAMBIADO
 from dotenv import load_dotenv
+
 load_dotenv()
 
-# CORS
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
+
+# CORS (igual)
 CORS(app, 
      resources={r"/*": {
          "origins": [
              "https://jimqm03.github.io", 
              "https://jimqm03.github.io/GestionG",
-             "http://localhost:5500",  # Para desarrollo local
-             "http://localhost:8000"   # Para desarrollo local alternativo
+             "http://localhost:5500",
+             "http://localhost:8000"
          ]
      }}, 
      supports_credentials=True)
 
-#PRUEBA DE CONEXION AL SERVIDOR
+# --- CONEXIÓN A DB (MODIFICADO) ---
 def conectar_db():
     try:
-        return psycopg2.connect(
+        conn = psycopg.connect(
             host=os.environ.get("DB_HOST"),
             dbname=os.environ.get("DB_NAME"),
             user=os.environ.get("DB_USER"),
             password=os.environ.get("DB_PASSWORD"),
-            port=int(os.environ.get("DB_PORT", 5432)),
-            sslmode="require"
+            port=int(os.environ.get("DB_PORT", 5432))
         )
+        print("✅ Conexión exitosa a PostgreSQL con psycopg")
+        return conn
     except Exception as e:
-        print("❌ Error DB:", e)
+        print(f"❌ Error DB: {e}")
         return None
 
-
-
-# --- CONEXIÓN A DB ---
-def conectar_db():
-    try:
-        return psycopg2.connect(
-            host=os.environ.get("DB_HOST"),
-            dbname=os.environ.get("DB_NAME"),
-            user=os.environ.get("DB_USER"),
-            password=os.environ.get("DB_PASSWORD"),
-            port=int(os.environ.get("DB_PORT", 5432)),
-            sslmode="require"
-        )
-    except Exception as e:
-        print("❌ Error DB:", e)
-        return None
-
-
-
-# --- LOGIN ----
+# --- LOGIN (adaptado para psycopg) ---
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
     u = data.get('usuario')
-    p = data.get('password') # Contraseña que escribes en la web
+    p = data.get('password')
 
     db = conectar_db()
-    cursor = db.cursor(dictionary=True)
+    if not db:
+        return jsonify({"status": "error", "mensaje": "Error de conexión DB"}), 500
     
     try:
-        # Buscamos al usuario
+        cursor = db.cursor(row_factory=psycopg.rows.dict_row)  # Para obtener diccionarios
         cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
         user = cursor.fetchone()
         
-        # COMPARACIÓN DIRECTA (Sin encriptar)
         if user and user['contrasena'] == p:
             session['usuario'] = user['nombre_usuario']
             return jsonify({
@@ -88,8 +67,9 @@ def login():
     except Exception as e:
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
-        cursor.close()
-        db.close()
+        if db:
+            db.close()
+
 # --- LOGOUT ---
 @app.route('/logout', methods=['POST'])
 def logout():
