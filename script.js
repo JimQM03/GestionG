@@ -3,7 +3,7 @@
 // ================================================
 
 // URL de tu backend en Railway
-const API_URL = "https://tu-app-de-render.onrender.compp";
+const API_URL = "https://gestiong-backend.onrender.com";
 const fetchConfig = { credentials: 'include' };
 
 

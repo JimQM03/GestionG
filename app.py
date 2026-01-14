@@ -27,19 +27,19 @@ CORS(app,
      supports_credentials=True)
 
 #PRUEBA DE CONEXION AL SERVIDOR
-@app.route("/test-db")
-def test_db():
+def conectar_db():
     try:
-        conn = conectar_db()
-        cur = conn.cursor()
-        cur.execute("SELECT 1;")
-        cur.close()
-        conn.close()
-        return {"status": "OK", "db": "connected"}
+        return psycopg2.connect(
+            host=os.environ.get("DB_HOST"),
+            dbname=os.environ.get("DB_NAME"),
+            user=os.environ.get("DB_USER"),
+            password=os.environ.get("DB_PASSWORD"),
+            port=int(os.environ.get("DB_PORT", 5432)),
+            sslmode="require"
+        )
     except Exception as e:
-        print("❌ TEST DB ERROR:", e)
-        return {"status": "ERROR", "message": str(e)}, 500
-
+        print("❌ Error DB:", e)
+        return None
 
 
 
@@ -240,7 +240,26 @@ def eliminar_historial():
         cursor.close()
         db.close()
 
+# === NUEVOS ENDPOINTS (AGREGAR ESTO) ===
+
+# --- VERIFICACIÓN DE SALUD ---
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy", "service": "GestionG API"}), 200
+
+# --- PÁGINA DE INICIO ---
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        "message": "GestionG API",
+        "version": "1.0",
+        "endpoints": ["/login", "/guardar-gasto", "/obtener-gastos", "/guardar-ingreso", "/calcular-saldo"]
+    }), 200
+
+# ========================================
+
 # SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
+
