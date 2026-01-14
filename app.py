@@ -26,14 +26,22 @@ CORS(app,
 # --- CONEXIÓN A DB (MODIFICADO) ---
 def conectar_db():
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("DB_HOST"),
-            dbname=os.environ.get("DB_NAME"),
-            user=os.environ.get("DB_USER"),
-            password=os.environ.get("DB_PASSWORD"),
-            port=int(os.environ.get("DB_PORT", 5432))
-        )
-        print("✅ Conexión exitosa a PostgreSQL con psycopg")
+        # OPCIÓN 1: Usando la cadena de conexión completa de Supabase
+        conn_string = os.environ.get("DATABASE_URL")
+        
+        # Si no hay DATABASE_URL, construirla con variables separadas
+        if not conn_string:
+            conn_string = (
+                f"host={os.environ.get('DB_HOST')} "
+                f"dbname={os.environ.get('DB_NAME')} "
+                f"user={os.environ.get('DB_USER')} "
+                f"password={os.environ.get('DB_PASSWORD')} "
+                f"port={os.environ.get('DB_PORT', 5432)} "
+                f"sslmode=require"  # IMPORTANTE para Supabase
+            )
+        
+        conn = psycopg.connect(conn_string)
+        print("✅ Conexión exitosa a Supabase PostgreSQL")
         return conn
     except Exception as e:
         print(f"❌ Error DB: {e}")
