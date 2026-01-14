@@ -26,32 +26,47 @@ CORS(app,
 # --- CONEXIÓN A SUPABASE CON psycopg (v3.x) ---
 def conectar_db():
     try:
-        # Obtener valores de entorno
         db_host = os.environ.get("DB_HOST", "db.uxzhjsmhbsemuvhragmc.supabase.co")
         db_name = os.environ.get("DB_NAME", "postgres")
         db_user = os.environ.get("DB_USER", "postgres")
         db_pass = os.environ.get("DB_PASSWORD")
         db_port = os.environ.get("DB_PORT", "5432")
         
-        print(f"🔧 Conectando a Supabase: {db_user}@{db_host}:{db_port}")
+        print(f"🔧 Conectando a: {db_host}")
         
-        # OPCIÓN 1: Conexión SIMPLIFICADA para Supabase (sin sslrootcert)
+        # OPCIÓN 2: Con verify-full (recomendado para producción)
         conn = psycopg.connect(
             host=db_host,
             dbname=db_name,
             user=db_user,
             password=db_pass,
             port=int(db_port),
-            # SOLO ESTOS PARÁMETROS (los mínimos necesarios)
-            sslmode="require"
+            sslmode="verify-full"
         )
         
-        print("✅ Conexión exitosa a Supabase")
+        print("✅ Conexión exitosa (verify-full)")
         return conn
         
     except Exception as e:
-        print(f"❌ Error DB: {type(e).__name__}: {e}")
-        return None
+        print(f"❌ Error: {e}")
+        
+        # Intentar con sslmode=require como fallback
+        try:
+            print("🔄 Intentando con sslmode=require...")
+            conn = psycopg.connect(
+                host=db_host,
+                dbname=db_name,
+                user=db_user,
+                password=db_pass,
+                port=int(db_port),
+                sslmode="require"
+            )
+            print("✅ Conexión exitosa (require)")
+            return conn
+        except Exception as e2:
+            print(f"❌ Fallback también falló: {e2}")
+            return None
+        
 # --- LOGIN (psycopg v3.x) ---
 @app.route('/login', methods=['POST'])
 def login():
