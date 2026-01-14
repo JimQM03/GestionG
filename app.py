@@ -26,49 +26,31 @@ CORS(app,
 # --- CONEXIÓN A SUPABASE CON psycopg (v3.x) ---
 def conectar_db():
     try:
-        # DEBUG: Imprimir valores para ver qué hay
+        # Obtener valores de entorno
         db_host = os.environ.get("DB_HOST", "db.uxzhjsmhbsemuvhragmc.supabase.co")
         db_name = os.environ.get("DB_NAME", "postgres")
         db_user = os.environ.get("DB_USER", "postgres")
         db_pass = os.environ.get("DB_PASSWORD")
         db_port = os.environ.get("DB_PORT", "5432")
         
-        print(f"🔧 Intentando conectar a Supabase:")
-        print(f"   Host: {db_host}")
-        print(f"   DB: {db_name}")
-        print(f"   User: {db_user}")
-        print(f"   Port: {db_port}")
-        print(f"   Password set: {'SÍ' if db_pass else 'NO'}")
+        print(f"🔧 Conectando a Supabase: {db_user}@{db_host}:{db_port}")
         
-        # CONEXIÓN DIRECTA CON PARÁMETROS CORRECTOS
+        # OPCIÓN 1: Conexión SIMPLIFICADA para Supabase (sin sslrootcert)
         conn = psycopg.connect(
             host=db_host,
             dbname=db_name,
             user=db_user,
             password=db_pass,
             port=int(db_port),
-            # Parámetros críticos para Supabase
-            sslmode="require",
-            sslrootcert="system",  # Usar certificados del sistema
-            target_session_attrs="read-write"
+            # SOLO ESTOS PARÁMETROS (los mínimos necesarios)
+            sslmode="require"
         )
         
-        print("✅ Conexión exitosa a Supabase PostgreSQL")
+        print("✅ Conexión exitosa a Supabase")
         return conn
         
     except Exception as e:
-        print(f"❌ Error DB DETALLADO: {type(e).__name__}")
-        print(f"   Mensaje: {str(e)}")
-        
-        # Información adicional para debug
-        import socket
-        try:
-            # Intentar resolver el hostname
-            ip = socket.gethostbyname(db_host)
-            print(f"   🔍 {db_host} resuelve a IP: {ip}")
-        except:
-            print(f"   🔍 No se puede resolver {db_host}")
-            
+        print(f"❌ Error DB: {type(e).__name__}: {e}")
         return None
 # --- LOGIN (psycopg v3.x) ---
 @app.route('/login', methods=['POST'])
@@ -409,7 +391,41 @@ def debug_supabase():
             "error": type(e).__name__,
             "message": str(e)
         }), 500
+
+@app.route('/test-connection', methods=['GET'])
+def test_connection():
+    """Prueba simple de conexión sin consultas complejas"""
+    import psycopg
     
+    try:
+        conn = psycopg.connect(
+            host="db.uxzhjsmhbsemuvhragmc.supabase.co",
+            dbname="postgres",
+            user="postgres",
+            password=os.environ.get("DB_PASSWORD", ""),
+            port=5432,
+            sslmode="require"  # Probar con esto primero
+        )
+        
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 as test")
+        result = cursor.fetchone()
+        
+        conn.close()
+        
+        return jsonify({
+            "status": "success",
+            "message": "✅ Conexión a Supabase exitosa",
+            "test_result": result[0]
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "type": type(e).__name__,
+            "suggestion": "Verifica DB_PASSWORD en variables de entorno"
+        }), 500
 
 # SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
