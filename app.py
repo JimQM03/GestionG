@@ -1,9 +1,10 @@
 import os
+import socket
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from datetime import datetime
-import psycopg  # ← ESTO es lo correcto para Python 3.9+
-from psycopg.rows import dict_row  # ← ASÍ se importa para diccionarios
+import psycopg
+from psycopg.rows import dict_row
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,49 +24,179 @@ CORS(app,
      }}, 
      supports_credentials=True)
 
-# --- CONEXIÓN A SUPABASE CON psycopg (v3.x) ---
+# --- CONEXIÓN A SUPABASE CON IP RESUELTA MANUALMENTE ---
 def conectar_db():
     try:
+        # Obtener credenciales
         db_host = os.environ.get("DB_HOST", "db.uxzhjsmhbsemuvhragmc.supabase.co")
         db_name = os.environ.get("DB_NAME", "postgres")
         db_user = os.environ.get("DB_USER", "postgres")
         db_pass = os.environ.get("DB_PASSWORD")
-        db_port = os.environ.get("DB_PORT", "5432")
+        db_port = int(os.environ.get("DB_PORT", 5432))
         
-        print(f"🔧 Conectando a: {db_host}")
+        print(f"🔧 Conectando a Supabase: {db_user}@{db_host}:{db_port}")
         
-        # OPCIÓN 2: Con verify-full (recomendado para producción)
+        # RESOLVER HOSTNAME A IPV4 MANUALMENTE
+        try:
+            # Forzar resolución IPv4
+            ip_info = socket.getaddrinfo(
+                db_host, db_port,
+                socket.AF_INET,  # Solo IPv4
+                socket.SOCK_STREAM
+            )
+            ipv4_address = ip_info[0][4][0]  # Obtener la primera IP IPv4
+            print(f"   Resuelto a IPv4: {ipv4_address}")
+            
+            # Usar IP directamente
+            actual_host = ipv4_address
+        except Exception as resolve_error:
+            print(f"   ❌ No se pudo resolver IPv4: {resolve_error}")
+            actual_host = db_host
+        
+        # CONEXIÓN CON TIMEOUT Y PARÁMETROS ESPECÍFICOS
         conn = psycopg.connect(
-            host=db_host,
+            host=actual_host,
             dbname=db_name,
             user=db_user,
             password=db_pass,
-            port=int(db_port),
-            sslmode="verify-full"
+            port=db_port,
+            sslmode="require",  # Requerido para Supabase
+            connect_timeout=10,  # Timeout de conexión
+            # Opciones para evitar problemas de red
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=3,
+            # Forzar reconexión en caso de error
+            options="-c statement_timeout=30000"
         )
         
-        print("✅ Conexión exitosa (verify-full)")
+        print("✅ Conexión exitosa a Supabase")
         return conn
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error DB: {type(e).__name__}: {e}")
         
-        # Intentar con sslmode=require como fallback
+        # DEBUG: Imprimir información de red
         try:
-            print("🔄 Intentando con sslmode=require...")
-            conn = psycopg.connect(
-                host=db_host,
-                dbname=db_name,
-                user=db_user,
-                password=db_pass,
-                port=int(db_port),
-                sslmode="require"
-            )
-            print("✅ Conexión exitosa (require)")
-            return conn
-        except Exception as e2:
-            print(f"❌ Fallback también falló: {e2}")
-            return None
+            print("🔍 Información de red:")
+            print(f"   Hostname: {db_host}")
+            print(f"   Intentando resolver...")
+            
+            # Intentar todas las direcciones IP
+            all_ips = socket.getaddrinfo(db_host, db_port)
+            print(f"   Todas las IPs encontradas: {all_ips}")
+            
+        except Exception as net_error:
+            print(f"   Error en diagnóstico de red: {net_error}")
+        
+        return None
+
+# --- ENDPOINT DE DIAGNÓSTICO MEJORADO ---
+@app.route('/network-diagnosis', methods=['GET'])
+def network_diagnosis():
+    """Diagnóstico completo de red para Supabase"""
+    host = "db.uxzhjsmhbsemuvhragmc.supabase.co"
+    port = 5432
+    
+    results = {
+        "target": f"{host}:{port}",
+        "tests": {}
+    }
+    
+    try:
+        # Test 1: Resolución DNS IPv4
+        try:
+            ipv4_list = []
+            for info in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
+                ipv4_list.append(info[4][0])
+            
+            results["tests"]["dns_ipv4"] = {
+                "status": "success",
+                "ips": list(set(ipv4_list)),  # Eliminar duplicados
+                "count": len(set(ipv4_list))
+            }
+        except Exception as dns_error:
+            results["tests"]["dns_ipv4"] = {
+                "status": "error",
+                "error": str(dns_error)
+            }
+        
+        # Test 2: Resolución DNS IPv6 (para comparar)
+        try:
+            ipv6_list = []
+            for info in socket.getaddrinfo(host, port, socket.AF_INET6, socket.SOCK_STREAM):
+                ipv6_list.append(info[4][0])
+            
+            results["tests"]["dns_ipv6"] = {
+                "status": "success",
+                "ips": list(set(ipv6_list)),
+                "count": len(set(ipv6_list))
+            }
+        except Exception as ipv6_error:
+            results["tests"]["dns_ipv6"] = {
+                "status": "error",
+                "error": str(ipv6_error)
+            }
+        
+        # Test 3: Conexión TCP a primera IP IPv4
+        if results["tests"]["dns_ipv4"]["status"] == "success" and results["tests"]["dns_ipv4"]["ips"]:
+            test_ip = results["tests"]["dns_ipv4"]["ips"][0]
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            tcp_result = sock.connect_ex((test_ip, port))
+            sock.close()
+            
+            results["tests"]["tcp_connection"] = {
+                "status": "success" if tcp_result == 0 else "failed",
+                "ip": test_ip,
+                "port": port,
+                "error_code": tcp_result,
+                "description": "Connection successful" if tcp_result == 0 else "Connection failed"
+            }
+        
+        # Test 4: Variables de entorno
+        results["environment"] = {
+            "DB_HOST": os.environ.get("DB_HOST"),
+            "DB_USER": os.environ.get("DB_USER"),
+            "DB_PASSWORD_set": bool(os.environ.get("DB_PASSWORD")),
+            "DB_PORT": os.environ.get("DB_PORT")
+        }
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "type": type(e).__name__,
+            "message": "Error durante el diagnóstico"
+        }), 500
+
+# --- SIMULATE CONNECTION (sin realmente conectar) ---
+@app.route('/simulate-connection', methods=['GET'])
+def simulate_connection():
+    """Simula la cadena de conexión sin conectar realmente"""
+    import urllib.parse
+    
+    host = "db.uxzhjsmhbsemuvhragmc.supabase.co"
+    user = "postgres"
+    password = os.environ.get("DB_PASSWORD", "[NOT_SET]")
+    
+    # Crear cadena de conexión para mostrar
+    conn_string = f"postgresql://{user}:{password[:3]}...@{host}:5432/postgres?sslmode=require"
+    
+    return jsonify({
+        "connection_string_sample": conn_string,
+        "parameters": {
+            "host": host,
+            "user": user,
+            "password_length": len(password) if password else 0,
+            "port": 5432,
+            "database": "postgres",
+            "sslmode": "require"
+        },
+        "note": "Esta es solo una simulación para verificar parámetros"
+    })
         
 # --- LOGIN (psycopg v3.x) ---
 @app.route('/login', methods=['POST'])
