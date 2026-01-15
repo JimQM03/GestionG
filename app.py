@@ -442,6 +442,25 @@ def home():
         ]
     }), 200
 
+# Endpoint liviano para pings
+@app.route('/keep-alive', methods=['GET'])
+def keep_alive():
+    return jsonify({
+        "status": "alive",
+        "service": "GestionG",
+        "timestamp": datetime.now().strftime("%H:%M:%S")
+    }), 200
+
+# Endpoint de health check completo
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "GestionG API",
+        "database": "Neon PostgreSQL",
+        "timestamp": datetime.now().isoformat()
+    }), 200
+
 # ================================================
 # INICIALIZACIÓN
 # ================================================
