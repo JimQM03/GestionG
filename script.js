@@ -61,12 +61,23 @@ async function actualizarTotales() {
         console.log("📊 Datos recibidos:", data);
 
         const displaySueldo = document.getElementById('Mostrar-sueldo');
+        if (displaySueldo) {
+            displaySueldo.textContent = data.total_gastos.toLocaleString('es-CO');
+        }
+
+        // 2. Mostrar el Ahorro (10% de los ingresos totales)
         const displayAhorro = document.getElementById('Ahorro-quincenal');
-        
-        if (displaySueldo) displaySueldo.textContent = data.saldo.toLocaleString('es-CO');
-        if (displayAhorro) displayAhorro.textContent = (data.total_ingresos * 0.1).toLocaleString('es-CO');
-    } catch (e) { 
-        console.error("❌ Error al actualizar totales:", e.message); 
+        if (displayAhorro) {
+            displayAhorro.textContent = (data.total_ingresos * 0.1).toLocaleString('es-CO');
+        }
+
+        // 3. ¡ESTO ES LO QUE TE FALTA! Actualizar el "Total gastado" al final de la tabla
+        const displayTotalHistorial = document.getElementById('total-gastado');
+        if (displayTotalHistorial) {
+            displayTotalHistorial.textContent = `$${data.total_gastos.toLocaleString('es-CO')}`;
+        } 
+    }catch (e) { 
+        console.error("❌ Error al actualizar totales:", e.message);
     }
 }
 
@@ -235,6 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             mostrarNotificacion('❌ Error al guardar en el servidor', 'error');
         }
+
+        await cargarHistorial();
+        await actualizarTotales();
     });
 
     // 3. BORRAR TODO EL HISTORIAL (CON MANEJO DE ERROR 500)
