@@ -10,19 +10,10 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
-
 CORS(app, supports_credentials=True)
 
 print("=" * 60)
 print("🚀 GestionG API con Neon PostgreSQL")
-print("=" * 60)
-
-# Mostrar configuración
-print("🔧 Configuración de Neon:")
-print(f"   Host: {os.environ.get('DB_HOST', 'No configurado')}")
-print(f"   User: {os.environ.get('DB_USER', 'No configurado')}")
-print(f"   DB: {os.environ.get('DB_NAME', 'No configurado')}")
-print(f"   Password: {'*' * len(os.environ.get('DB_PASSWORD', '')) if os.environ.get('DB_PASSWORD') else 'No configurado'}")
 print("=" * 60)
 
 # --- CONEXIÓN A NEON ---
@@ -133,7 +124,7 @@ def inicializar_db():
 inicializar_db()
 
 # ================================================
-# ENDPOINTS PRINCIPALES
+# ENDPOINTS PRINCIPALES - SIN DUPLICADOS
 # ================================================
 
 @app.route('/guardar-gasto', methods=['POST'])
@@ -352,7 +343,7 @@ def eliminar_todos_gastos():
         conn.close()
 
 # ================================================
-# ENDPOINTS DE DIAGNÓSTICO
+# ENDPOINTS DE DIAGNÓSTICO - SIN DUPLICADOS
 # ================================================
 
 @app.route('/test-neon', methods=['GET'])
@@ -414,6 +405,7 @@ def test_neon():
     finally:
         conn.close()
 
+# ESTE ES EL ÚNICO /health - NO HAY DUPLICADO
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
@@ -421,6 +413,16 @@ def health_check():
         "service": "GestionG API",
         "database": "Neon PostgreSQL",
         "usuario": "german",
+        "timestamp": datetime.now().isoformat()
+    }), 200
+
+# ESTE ES EL ÚNICO /keep-alive - NO HAY DUPLICADO
+@app.route('/keep-alive', methods=['GET'])
+def keep_alive():
+    """Endpoint rápido para pings de UptimeRobot"""
+    return jsonify({
+        "status": "alive",
+        "service": "GestionG",
         "timestamp": datetime.now().isoformat()
     }), 200
 
@@ -438,33 +440,13 @@ def home():
             "/eliminar-gasto/<id> (DELETE)",
             "/eliminar-todos-gastos (DELETE)",
             "/test-neon (GET)",
-            "/health (GET)"
+            "/health (GET)",
+            "/keep-alive (GET)"
         ]
     }), 200
 
-# Endpoint liviano para pings
-@app.route('/keep-alive', methods=['GET'])
-def keep_alive():
-    return jsonify({
-        "status": "alive",
-        "service": "GestionG",
-        "timestamp": datetime.now().strftime("%H:%M:%S")
-    }), 200
-
-# Endpoint de health check completo
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({
-        "status": "healthy",
-        "service": "GestionG API",
-        "database": "Neon PostgreSQL",
-        "timestamp": datetime.now().isoformat()
-    }), 200
-
-
-
 # ================================================
-# INICIALIZACIÓN siempre al final 
+# PUNTO DE ENTRADA - ESENCIAL PARA RENDER
 # ================================================
 
 if __name__ == "__main__":
