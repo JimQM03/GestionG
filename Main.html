@@ -7,22 +7,15 @@
     <title>GestionG - Control de Finanzas</title>
 </head>
 <body>
-    <script>
-   (function verificarSesion() {
-    // Buscamos 'usuario_logueado' que es lo que realmente guarda tu login.js
-    const session = localStorage.getItem('usuario_logueado'); 
-    
-    if (!session) {
-        console.log("No hay sesión activa, redirigiendo...");
-        window.location.href = 'index.html';
-        return;
-    }
-    console.log("Sesión confirmada para:", session);
-    })();
-    </script>
     <!-- Encabezado principal -->
     <header>
-        Gestión de cuentas - <small id="nombre-usuario-display">Cargando...</small>
+        <div class="header-content">
+            <h1>GestionG</h1>
+            <div class="user-info">
+                <span id="nombre-usuario-display">Cargando...</span>
+                <button onclick="cerrarSesion()" class="btn-logout">Cerrar Sesion</button>
+            </div>
+        </div>
     </header>
 
 
@@ -35,9 +28,11 @@
             <!-- Seccion de resumen: muestra los calculos -->
             <section id="resumenes">
                 <h3>Tu resumen</h3>
-                <p>Sueldo: <span id="Mostrar-sueldo">0</span> COP</p>   
-                <p>Ahorro Quincenal (10%): <span id="Ahorro-quincenal">0</span> COP</p>
-                <p>Valor por clase: <span id="valor-clase">0</span> COP</p>
+                <div class="resumen-grid">
+                    <p>Sueldo: <span id="Mostrar-sueldo">0</span> COP</p>   
+                    <p>Ahorro Quincenal (10%): <span id="Ahorro-quincenal">0</span> COP</p>
+                    <p>Valor por clase: <span id="valor-clase">0</span> COP</p>
+                </div>
             </section>
 
             <!-- Entradas de informacion basica -->
@@ -45,12 +40,9 @@
                 <h3>Datos de ingresos</h3>
                 <input type="number" id="num-clases" placeholder="Numero de clases dadas">
                 <input type="number" id="CopQuincenal" placeholder="Sueldo en pesos">
-                
                 <textarea id="desc-ingreso" placeholder="Descripcion del ingreso (Ej: Bono Extra)" rows="2"></textarea>
+                <button id="botonGuardar" class="btn-primario">Guardar</button>
             </section>
-            
-            <button id="botonGuardar">Guardar</button>
-            <br><br><br>
 
             <!--Grafico de gastos-->
             <section id="contenedor-grafico">
@@ -59,6 +51,7 @@
             </section>
 
         </div>
+
         <!-- ============================================
              COLUMNA DERECHA - Planificador de gastos
         ============================================ -->
@@ -68,7 +61,7 @@
                 
                 <!-- Gastos que son todos los meses -->
                 <div class="seccion-gastos">
-                    <h3>Gastos Fijos y Agenda</h3>
+                    <h3>Gastos Especificos</h3>
                     
                     <div class="fila-gasto">
                         <input type="date" id="fecha-gasto-real">
@@ -101,10 +94,10 @@
             <section id="lista-proximos-pagos">
                 <!--Contenedor flexible para titulo y boton de exportar-->
                 <div class="header-historial">
-                    <h2>Agenda de Pagos Quincenal</h2>
+                    <h2>Agenda de Gastos</h2>
                     <button id="boton-exportar">Exportar</button>
                 </div>
-                
+
                 <section id="seccion-historial">
                     <h2>Pestana de Historial</h2>
                     <div id="contenedor-historial">
@@ -120,7 +113,7 @@
                             </thead>
                             <tbody id="cuerpo-historial">
                                 <tr>
-                                    <td colspan="3" class="texto-centrado">Aun no hay registros en el historial.</td>
+                                    <td colspan="5" class="texto-centrado">Aun no hay registros en el historial.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -139,14 +132,12 @@
         </div>
     </main>
     <!--Contenedor para notificaciones flotantes-->
-    <div id="notificacion-container" class="notificacion-hidden">
-        <span id="notificacion-mensaje"></span>
-    </div>
+    <div id="notificacion-container" class="notificacion-hidden"></div>
 
     <!--Modal de confirmacion personalizado-->
     <div id="custom-modal" class="modal-hidden">
         <div class="modal-content">
-            <h3>¿Estas seguro?</h3>
+            <h3 id="modal-titulo">¿Estas seguro?</h3>
             <p id="modal-texto">Esta accion no se podra deshacer.</p>
             <div class="modal-actions">
                 <button id="modal-confirmar" class="btn-danger">Confirmar</button>
@@ -158,8 +149,12 @@
     <div id="modal-notificacion" class="modal-hidden">
         <div class="modal-content notificacion-card">
             <div id="icono-notificacion">✅</div>
-            <p id="mensaje-notificacion-modal"></p>
-            <button id="btn-cerrar-notif" class="boton-primario">Entendido</button>
+            <div id="mensaje-notificacion-modal"></div>
+
+            <div class="botones-modal-container"style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="btn-enviar-email-modal" class="btn-email">📧 Enviar resumen al correo</button>
+                <button id="btn-cerrar-notif" class="boton-primario">Entendido</button>
+            </div>
         </div>
     </div>
     <!--Modal de eliminacion individual-->
@@ -175,7 +170,7 @@
     </div>
     
     <!--Llamado del grafico-->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script> <!--Estamos descargandola desde la pagina cdn.jsdelivr.net-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script> <!--Estamos descargandola desde la pagina cdn.jsdelivr.net-->
 
     <!--Llamado del script-->
     <script src="script.js"></script>

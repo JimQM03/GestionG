@@ -1,7 +1,6 @@
 /* ===============================================
-   CONFIGURACIÓN BASE
+    1. CONFIGURACIÓN BASE Y CUERPO
    =============================================== */
-
 body {
     background-color: #e6f2ff;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -13,16 +12,44 @@ header {
     background-color: #001f3f;
     color: white;
     padding: 20px;
-    text-align: center;
-    font-size: 24px;
-    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Empuja el contenido de usuario a la derecha */
+    position: relative;
+    min-height: 60px;
+    box-sizing: border-box;
 }
 
+/* Título principal centrado perfectamente */
+header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* Contenedor para Nombre y Botón Logout a la derecha */
+.user-info-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 10;
+}
+
+#nombre-usuario-display {
+    font-size: 14px;
+    font-weight: normal;
+    color: #cbd5e0;
+}
 
 /* ===============================================
-   ESTRUCTURA DEL DASHBOARD
+    2. ESTRUCTURA DEL DASHBOARD
    =============================================== */
-
 .dashboard {
     display: flex;
     gap: 30px;
@@ -32,22 +59,15 @@ header {
     align-items: flex-start;
 }
 
-/* La columna izquierda es más chiquita y se queda pegada arriba */
 .columna-izquierda {
     flex: 1;
     position: sticky;
     top: 20px;
 }
 
-/* La derecha ocupa más espacio para el planificador */
 .columna-derecha {
     flex: 2;
 }
-
-
-/* ===============================================
-   SECCIONES Y TARJETAS
-   =============================================== */
 
 section {
     background-color: white;
@@ -63,12 +83,10 @@ section h3 {
     font-size: 18px;
 }
 
-
 /* ===============================================
-   INPUTS Y FORMULARIOS
+    3. INPUTS Y ALINEACIÓN (MONTO AL LADO DE FECHA)
    =============================================== */
-
-input {
+input, textarea {
     width: 100%;
     padding: 10px;
     margin: 5px 0;
@@ -78,67 +96,63 @@ input {
     font-size: 14px;
 }
 
+textarea {
+    font-family: inherit;
+    resize: vertical;
+}
+
 input:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
 
+/* Filas de gastos: Une Fecha y Valor en una línea */
+.fila-gasto {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    align-items: center;
+}
+
+/* Ajuste de proporciones para que se vea bien acomodado */
+.fila-gasto input[placeholder="Día"], 
+.fila-gasto input[type="date"],
+.fila-gasto input[type="number"]:first-child {
+    flex: 1; /* Más angosto */
+}
+
+.fila-gasto input[placeholder*="Valor"], 
+.fila-gasto input[placeholder*="Monto"],
+.fila-gasto input[placeholder="Suscripciones"],
+.fila-gasto input[type="number"]:last-child {
+    flex: 2; /* Más ancho */
+}
 
 /* ===============================================
-   SECCIÓN DE GASTOS
+    4. SECCIÓN DE GASTOS (PLANIFICADOR)
    =============================================== */
-
 #horario-gastos {
     border-top: 6px solid #007bff;
 }
 
-#horario-gastos h2 {
-    text-align: center;
-    color: #001f3f;
-    margin-top: 0;
-}
-
-/* Cada grupo de gastos (Fijos, Variables, Deudas) */
 .seccion-gastos {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin-top: 20px;
 }
 
-/* Los títulos ocupan todo el ancho */
 .seccion-gastos h3 {
-    grid-column: span 2;
     color: #007bff;
     border-bottom: 2px solid #e6f2ff;
     padding-bottom: 5px;
     margin-bottom: 5px;
 }
 
-/* Filas de gastos fijos con día y valor */
-.fila-gasto {
-    display: flex;
-    gap: 10px;
-    grid-column: span 2;
-}
-
-/* El input del día es más chico */
-.fila-gasto input[placeholder="Día"] {
-    flex: 1;
-}
-
-/* Los inputs de valor son más grandes */
-.fila-gasto input[placeholder^="Valor"], 
-.fila-gasto input[placeholder="Suscripciones"] {
-    flex: 3;
-}
-
-
 /* ===============================================
-   BOTONES
+    5. BOTONES
    =============================================== */
-
 button {
     background-color: #007bff;
     color: white;
@@ -149,7 +163,6 @@ button {
     cursor: pointer;
     transition: all 0.3s ease;
     width: 100%;
-    margin-top: 10px;
 }
 
 button:hover {
@@ -158,455 +171,166 @@ button:hover {
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
 }
 
-button:active {
-    transform: translateY(0);
+.btn-logout {
+    width: auto;
+    background: #dc3545;
+    padding: 8px 15px;
+    font-size: 12px;
+    margin: 0;
 }
 
-.btn-eliminar{
+.btn-logout:hover {
+    background: #c82333;
+}
+
+.btn-eliminar {
     background-color: transparent;
     color: #ff4d4d;
     padding: 5px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    width: auto;
+}
+
+#boton-exportar {
+    width: auto;
+    background-color: #28a745;
+    padding: 8px 15px;
     font-size: 14px;
 }
 
-.btn-eliminar:hover{
-    background-color: #ff4d4d;
+.btn-email {
+    background-color: #28a745;
     color: white;
-    box-shadow: 0 2px 8px rgba(255, 77, 77, 0.3);
-    transform: translateY(-1px);
+    border: none;
+    padding: 10px  20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: bacground 0.3s;
+    font-size: 14px;
 }
 
-/* ===============================================
-   AGENDA DE PAGOS (resultado)
-   =============================================== */
+.btn-eliminar:hover {
+    background-color: #218838;
+}
 
+/* Ajuste para que los botones se vean bien en el modal */
+.modal-content.notificacion-card div {
+    width: 100%;
+}
+/* ===============================================
+    6. AGENDA Y RESULTADOS
+   =============================================== */
 #lista-proximos-pagos {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
 }
 
-#lista-proximos-pagos h2 {
-    color: white;
-    text-align: center;
-}
-
-#contenedor-agenda {
-    background-color: rgba(255, 255, 255, 0.95);
-    padding: 20px;
-    border-radius: 8px;
-    color: #333;
-}
-
-/* Cada grupo de gastos en la agenda */
-.grupo-gastos {
-    margin-bottom: 25px;
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-}
-
-.grupo-gastos h3 {
-    color: #001f3f;
-    margin-top: 0;
+.header-historial {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Botón exportar a la derecha */
+    position: relative;
+    min-height: 50px;
     margin-bottom: 15px;
-    font-size: 16px;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 8px;
 }
 
-/* Las deudas tienen un estilo especial */
+.header-historial h2 {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    white-space: nowrap;
+}
+
 .grupo-gastos.deudas {
     background-color: #fff3cd;
     border-left: 4px solid #ffc107;
 }
 
-.grupo-gastos.deudas h3 {
-    color: #856404;
-    border-bottom-color: #ffc107;
-}
-
-/* Cada item individual de gasto */
-.item-gasto {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    margin-bottom: 8px;
-    background-color: white;
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.dia-mes {
-    background-color: #007bff;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 12px;
-    min-width: 50px;
-    text-align: center;
-}
-
-.nombre-gasto {
-    flex: 1;
-    margin: 0 15px;
-    font-weight: 500;
-}
-
-.valor-gasto {
-    font-weight: bold;
-    color: #dc3545;
-    font-size: 16px;
-}
-
-/* Resumen total al final */
-.resumen-total {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    margin-top: 20px;
-}
-
-.resumen-total h3 {
-    margin-top: 0;
-    color: white;
-}
-
-.total-grande {
-    font-size: 32px;
-    font-weight: bold;
-    margin: 10px 0;
-}
-/* ===============================================
-   AJUSTES PARA DESCRIPCIÓN E HISTORIAL
-   =============================================== */
-
-/* Estilo para los cuadros de descripción (Textarea) */
-textarea {
-    width: 100%;
-    padding: 10px;
-    margin: 5px 0;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    box-sizing: border-box;
-    font-size: 14px;
-    font-family: inherit; /* Para que use la misma letra que el resto */ 
-    resize: vertical; /* Permite que el usuario lo estire solo hacia abajo */
-}
-/* Estilo para la Tabla de Historial (Requisito de revisión) */
-#tabla-historial {
-    width: 100%;
-    border-collapse: collapse; /* Quita espacios entre bordes */
-    background-color: white;
-    color: #333;
-    border-radius: 8px;
-    overflow: hidden;/* Para que las esquinas se vean redondeadas */
-    margin-top: 15px;
-}
-#tabla-historial th{
-    background-color: #001f3f;
-    color: white;
-    padding: 12px;
-    text-align: left;
-    font-size: 14px;
-}
-#tabla-historial td{
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    font-size: 14px;
-}
-/* Estilo para el input de tipo calendario */ 
-input[type="date"]{
-    cursor: pointer;
-    color: #333;
-}
-/* Ajuste para el botón de borrar (Rojo para advertencia) */
-#botonBorrarHistorial{
-    background-color: #dc3545;
-    margin-top: 15px;
-}
-#botonBorrarHistorial:hover{
-    background-color: #a71d2a;
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3)
-}
-/* ===============================================
-   ESTILOS DE LOGIN (CENTRALIZADO)
-   =============================================== */
-
-/* Fondo con el gradiente de la agenda para coherencia visual */
-.cuerpo-login {
-    background: linear-gradient(135deg, #667eea 0%, #007bff 100%);
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    overflow: hidden;
-}
-/* La tarjeta "flotante" */
-#tarjeta-acceso{
-    background-color: white;
-    width: 100%;
-    max-width: 350px;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    text-align: center;
-    border-top: 6px solid #007bff;/* Mismo azul de la sección gastos */
-}
-/* Estilos de texto usando tus colores base */
-.login-titulo {
-    color: #001f3f; /* Azul marino del header */
-    margin: 0 0 10px 0;
-    font-size: 28px;
-}
-.login-subtitulo {
-    color: #666;
-    margin-bottom: 25px;
-    font-size: 14px;
-}
-.campo-grupo {
-    text-align: left;
-    margin-bottom: 15px; 
-}
-.etiqueta-login {
-    font-weight: bold;
-    color: #001f3f;
-    font-size: 14px;
-}
-
-/* Personalización del botón para el Login */
-#botonEntrar {
-    background-color: #007bff;
-    color: white;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-radius: 8px;
-    cursor: pointer;
-    width: 100%;
-    transition: background-color 0.3s ease;
-}
-#botonEntrar:hover{
-    background-color: #001f3f;/* Al pasar el mouse, cambia al azul del header */
-}
-.login-footer {
-    margin-top: 25px;
-    border-top: 1px solid #eee;/* Una línea sutil para separar */
-    padding-top: 15px;
-}
-.login-footer a {
-    color: #007bff;/* Usamos el morado de tu gradiente para el link */
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    transition: color 0.3s ease;
-}
-.login-footer a:hover {
-    color: #007bff;/* Cambia al azul brillante al pasar el mouse */
-    text-decoration: underline;
-}
-/* ===============================================
-   ESTILOS ADICIONALES PARA EL FOOTER DEL LOGIN
-   =============================================== */
-.login-footer {
-    margin-top: 25px;
-    border-top: 1px solid #eee; /*Una linea sutil para separar*/
-    padding-top: 15px;
-}
-.login-footer a{
-    color: #764ba2;/* Usamos el morado de tu gradiente para el link */
-}
-
-/* Estilos para el encabezado del historial*/
-.header-historial {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-/* Botón de exportar verde */
-#boton-exportar {
-    width: auto;
-    background-color: #28a745;
-    margin: 0;
-    padding: 8px 15px;
-    font-size: 14px;
-}
-
-#boton-exportar:hover{
-    background-color: #218838;
-}
-
-/* Caja de total acumulado */
-.caja-total{
+.caja-total {
     text-align: right;
     padding: 15px;
     background-color: #ffffff;
     color: #333;
     border: 1px solid #ddd;
     border-radius: 8px;
-    margin-bottom: 10px;
 }
 
-#total-gastado{
-    color: #dc3545;
-    font-weight: bold;
-    font-size: 1.3em;
-}
-
-/* Utilidad para centrar texto en tabla */
-.texto-centrado{
-    text-align: center;
-}
-
-/* Estilo para el área de descripción en el planificador */
-#desc-gasto{
-    width: 100%;
-}
 /* ===============================================
-    Estilos para Notificaciones
-   ===============================================*/
-#notificacion-container{
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 25px;
+    7. TABLA DE HISTORIAL
+   =============================================== */
+#tabla-historial {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
     border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    z-index: 1000;
+    overflow: hidden;
+    table-layout: auto; /* Permite que las columnas se expandan */
 }
 
-.notificacion-success {background-color: #28a745;}
-.notificacion-error {background-color: #dc3545;}
-.notificacion-hidden {
-    opacity: 0; 
-    transform: translateY(-20px);
-    pointer-events: none;
+#tabla-historial th {
+    background-color: #001f3f;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    white-space: nowrap; /* Evita que los títulos de cabecera se amontonen */
 }
+
+#tabla-historial td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    word-break: break-word; /* Permite que la descripción larga baje de línea */
+}
+
+/* Colores para las etiquetas en la tabla */
+.badge.deuda { background-color: #ff4136; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
+.badge.variable { background-color: #ff851b; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
+.badge.media, .badge.fijo { background-color: #0074d9; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
 
 /* ===============================================
-    Estilos para el Modal Personalizado 
-   ===============================================*/
-#custom-modal,
-#modal-notificacion,
-#modal-confirmar-eliminar{
+    8. MODALES Y NOTIFICACIONES
+   =============================================== */
+#custom-modal, #modal-notificacion, #modal-confirmar-eliminar {
     position: fixed !important;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.7) !important;
-    display: flex; /*Centra la tarjeta*/
+    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999 !important;
 }
-.modal-content,
-.notificacion-card {
+
+.modal-content {
     background: white !important;
     padding: 30px !important;
     border-radius: 15px !important;
-    text-align: center !important;
+    text-align: center;
     max-width: 400px;
     width: 90%;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
-    color: #333 !important;
 }
 
-.modal-hidden{
-    display: none !important;
+.modal-hidden { display: none !important; }
+
+.recordatorio-item {
+    text-align: left;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border-left: 5px solid #ccc;
+    background-color: #f9f9f9;
 }
 
-.modal-actions, .modal-footer{
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 20px;
-}
+.urgencia-critica { border-left-color: #dc3545; background: #fff5f5; }
+.urgencia-urgente { border-left-color: #fd7e14; background: #fff9f2; }
+.urgencia-info { border-left-color: #ffc107; background: #fffdf5; }
 
-#icono-notificaicion{
-    font-size: 50px;
-    margin-bottom: center;
-    margin-top: 20px;
-}
-
-#icono-notificacion{
-    font-size: 50px;
-    margin-bottom: 15px;
-    display: block;
-}
-
-.btn-danger {background-color: #dc3545 !important; color: white !important;}
-.btn-secondary {background-color: #6c757d !important; color: white !important;}
+.recordatorio-item strong { display: block; color: #333; font-size: 14px; }
+.recordatorio-item span { font-size: 12px; color: #666; }
 
 /* ===============================================
-   Estilos para el grafico
+    9. LOGIN (GRADIENTE Y TARJETA)
    =============================================== */
-#contenedor-grafico{
-    background-color: white;
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
-    text-align: center;
-}
-
-#contenedor-grafico h3{
-    font-size: 16px;
-    margin-bottom: 15px;
-    color: #001f3f;
-}
-
-#graficoGastos{
-    max-width: 100% !important;
-    height: auto !important;
-    display: block;
-    margin: 0 auto;
-}
-
-/* ===============================================
-   RESPONSIVE - Para pantallas chiquitas
-   =============================================== */
-   
-   @media (max-width: 768px) {
-    .dashboard {
-        flex-direction: column;
-        padding: 20px;
-    }
-    
-    .columna-izquierda {
-        position: relative;
-        top: 0;
-    }
-    
-    .seccion-gastos {
-        grid-template-columns: 1fr;
-    }
-    
-    .seccion-gastos h3 {
-        grid-column: span 1;
-    }
-    
-    .fila-gasto {
-        grid-column: span 1;
-    }
-}
-
-/* ================================================
-   ESTILOS PARA EL LOGIN LOCAL
-   ================================================ */
-
 .cuerpo-login {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
@@ -614,158 +338,32 @@ input[type="date"]{
     align-items: center;
     justify-content: center;
     margin: 0;
-    padding: 20px;
-}
-
-.login-wrapper {
-    width: 100%;
-    max-width: 400px;
 }
 
 .tarjeta-acceso {
     background: white;
-    padding: 40px 30px;
+    padding: 40px;
     border-radius: 12px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 350px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-top: 6px solid #007bff;
     text-align: center;
-    border-top: 4px solid #007bff;
 }
 
-.login-titulo {
-    color: #001f3f;
-    margin: 0 0 10px 0;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-.login-subtitulo {
-    color: #666;
-    margin-bottom: 30px;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.campo-grupo {
-    margin-bottom: 20px;
-    text-align: left;
-}
-
-.etiqueta-login {
-    display: block;
-    margin-bottom: 8px;
-    color: #333;
-    font-weight: 500;
-    font-size: 14px;
-}
-
-#usuario, #password {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 16px;
-    box-sizing: border-box;
-    transition: all 0.3s;
-}
-
-#usuario:focus, #password:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-#botonEntrar {
-    width: 100%;
-    padding: 14px;
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-    margin-top: 10px;
-}
-
-#botonEntrar:hover {
-    background: linear-gradient(135deg, #0056b3, #004085);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
-}
-
-#botonEntrar:active {
-    transform: translateY(0);
-}
-
-.login-footer {
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
-    font-size: 13px;
-    color: #666;
-}
-
-.login-footer a {
-    color: #007bff;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.login-footer a:hover {
-    text-decoration: underline;
-}
-
-/* ================================================
-   ESTILOS RESPONSIVE
-   ================================================ */
-
-@media (max-width: 480px) {
-    .tarjeta-acceso {
-        padding: 30px 20px;
+/* ===============================================
+    10. RESPONSIVE
+   =============================================== */
+@media (max-width: 768px) {
+    .dashboard { flex-direction: column; }
+    header h1, .header-historial h2 {
+        position: static;
+        transform: none;
+        margin-bottom: 10px;
     }
-    
-    .login-titulo {
-        font-size: 24px;
-    }
-    
-    .dashboard {
+    header, .header-historial {
         flex-direction: column;
-        padding: 20px;
+        text-align: center;
     }
-    
-    .columna-izquierda,
-    .columna-derecha {
-        width: 100%;
-    }
-}
-
-/* ================================================
-   ESTILOS PARA BOTONES DEL HEADER
-   ================================================ */
-
-header {
-    position: relative;
-    padding-right: 120px !important;
-}
-
-.btn-logout {
-    position: absolute;
-    top: 50%;
-    right: 20px;
-    transform: translateY(-50%);
-    padding: 8px 15px;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
-    transition: all 0.3s;
-}
-
-.btn-logout:hover {
-    background: #c82333;
-    transform: translateY(-50%) scale(1.05);
+    .fila-gasto { flex-direction: column; }
 }
