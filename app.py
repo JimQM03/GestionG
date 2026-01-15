@@ -461,8 +461,10 @@ def health_check():
         "timestamp": datetime.now().isoformat()
     }), 200
 
+
+
 # ================================================
-# INICIALIZACIÓN
+# INICIALIZACIÓN siempre al final 
 # ================================================
 
 if __name__ == "__main__":
