@@ -1,140 +1,188 @@
 // ================================================
-// LOGIN.JS - Manejo de autenticación (VERSIÓN CORREGIDA)
+// LOGIN.JS - LOGIN LOCAL 100% INDEPENDIENTE
 // ================================================
 
-const API_URL = "https://gestiong-backend.onrender.com";
+// Credenciales fijas en el código
+const USUARIO_VALIDO = "german";
+const CONTRASENA_VALIDA = "Germancho1984";
 
-console.log('🔄 Script login.js cargado - Versión corregida');
-
-// Función principal de login
-function inicializarLogin() {
-    console.log('🔄 Inicializando login...');
+// Función para mostrar notificaciones
+function mostrarNotificacion(mensaje, tipo = 'success') {
+    const notificacion = document.createElement('div');
+    notificacion.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 8px;
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        background-color: ${tipo === 'success' ? '#28a745' : '#dc3545'};
+        animation: slideIn 0.3s ease;
+    `;
     
-    const loginForm = document.getElementById('formLogin');
+    notificacion.textContent = mensaje;
+    document.body.appendChild(notificacion);
+    
+    setTimeout(() => {
+        notificacion.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notificacion.remove(), 300);
+    }, 3000);
+}
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Login local inicializado');
+    
+    const formLogin = document.getElementById('formLogin');
     const inputUsuario = document.getElementById('usuario');
     const inputPassword = document.getElementById('password');
-
-    console.log('Form:', loginForm);
-    console.log('Usuario input:', inputUsuario);
-    console.log('Password input:', inputPassword);
-
-    // Verificamos que los elementos existan
-    if (!loginForm) {
-        console.error('❌ No se encontró el formulario con id="formLogin"');
+    const botonEntrar = document.getElementById('botonEntrar');
+    
+    if (!formLogin) {
+        console.error('❌ No se encontró el formulario de login');
         return;
     }
     
-    if (!inputUsuario) {
-        console.error('❌ No se encontró el input con id="usuario"');
-        return;
+    // Verificar si ya hay sesión activa
+    const usuarioLogueado = localStorage.getItem('usuario_logueado');
+    if (usuarioLogueado === USUARIO_VALIDO) {
+        console.log('✅ Sesión ya activa, redirigiendo...');
+        setTimeout(() => window.location.href = 'Main.html', 100);
     }
     
-    if (!inputPassword) {
-        console.error('❌ No se encontró el input con id="password"');
-        return;
+    // Configurar placeholder para usuario
+    if (inputUsuario) {
+        inputUsuario.placeholder = USUARIO_VALIDO;
+        inputUsuario.value = USUARIO_VALIDO; // Prellenar por comodidad
     }
-
-    console.log('✅ Todos los elementos encontrados correctamente');
-
-    // Manejador del formulario
-    loginForm.addEventListener('submit', async (e) => {
+    
+    // Manejar envío del formulario
+    formLogin.addEventListener('submit', (e) => {
         e.preventDefault();
-
-        const usuario = inputUsuario.value.trim();
-        const password = inputPassword.value.trim();
-
+        
+        const usuario = inputUsuario ? inputUsuario.value.trim() : '';
+        const password = inputPassword ? inputPassword.value.trim() : '';
+        
+        console.log(`🔐 Intento de login: ${usuario}`);
+        
+        // Validación simple
         if (!usuario || !password) {
-            alert('⚠️ Por favor completa todos los campos');
+            mostrarNotificacion('⚠️ Por favor completa todos los campos', 'error');
             return;
         }
-
-        console.log('🔄 Intentando login con usuario:', usuario);
-
-        try {
-            const response = await fetch(`${API_URL}/login`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ usuario, password }),
-                credentials: 'include'
-            });
-
-            // Verificar si la respuesta es exitosa
-            if (!response.ok) {
-                if (response.status === 500) {
-                    // Error del servidor - probablemente problema de DB
-                    alert('❌ Error del servidor. Verifica la conexión a la base de datos.');
-                    console.error('Error 500 del servidor');
-                    return;
-                }
-                
-                const errorText = await response.text();
-                console.error(`Error ${response.status}:`, errorText);
-                throw new Error(`Error ${response.status}`);
-            }
-
-            // Intentar parsear la respuesta como JSON
-            const data = await response.json();
-            console.log('Respuesta del servidor:', data);
-
-            if (data.status === 'success') {
-                console.log('✅ Login exitoso');
-                localStorage.setItem('usuario_logueado', usuario);
-                // Añadir un pequeño delay para asegurar que la sesión se establece
-                setTimeout(() => {
-                    window.location.href = 'Main.html';
-                }, 100);
-            } else {
-                alert("❌ Error: " + (data.mensaje || "Usuario o contraseña incorrectos"));
-            }
-        } catch (error) {
-            console.error("❌ Error en el login:", error);
+        
+        // Verificar credenciales
+        if (usuario === USUARIO_VALIDO && password === CONTRASENA_VALIDA) {
+            console.log('✅ Credenciales correctas');
             
-            // Mensajes de error más específicos
-            if (error.message.includes('Failed to fetch')) {
-                alert("❌ No se pudo conectar con el servidor. Verifica tu conexión a internet.");
-            } else if (error.message.includes('500')) {
-                alert("❌ Error interno del servidor. Revisa los logs de Render.");
-            } else {
-                alert("❌ Error: " + error.message);
+            // Guardar sesión
+            localStorage.setItem('usuario_logueado', USUARIO_VALIDO);
+            localStorage.setItem('sesion_activa', 'true');
+            
+            // Feedback visual
+            if (botonEntrar) {
+                botonEntrar.textContent = '✅ Acceso concedido...';
+                botonEntrar.style.backgroundColor = '#28a745';
+                botonEntrar.disabled = true;
+            }
+            
+            mostrarNotificacion('✅ ¡Acceso concedido! Redirigiendo...', 'success');
+            
+            // Redirigir después de 1 segundo
+            setTimeout(() => {
+                window.location.href = 'Main.html';
+            }, 1000);
+            
+        } else {
+            console.log('❌ Credenciales incorrectas');
+            mostrarNotificacion('❌ Usuario o contraseña incorrectos', 'error');
+            
+            // Feedback visual de error
+            if (botonEntrar) {
+                botonEntrar.textContent = '❌ Credenciales incorrectas';
+                botonEntrar.style.backgroundColor = '#dc3545';
+                
+                setTimeout(() => {
+                    botonEntrar.textContent = 'Ingresar';
+                    botonEntrar.style.backgroundColor = '';
+                }, 2000);
+            }
+            
+            // Limpiar contraseña
+            if (inputPassword) {
+                inputPassword.value = '';
+                inputPassword.focus();
             }
         }
     });
-}
-
-// Ejecutar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', inicializarLogin);
-} else {
-    inicializarLogin();
-}
-
-// Función para probar la conexión (opcional)
-async function testConexion() {
-    try {
-        console.log('🔍 Probando conexión con el servidor...');
-        const response = await fetch(`${API_URL}/health`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Servidor disponible:', data);
-            return true;
-        } else {
-            console.warn('⚠️ Servidor respondió con error:', response.status);
-            return false;
+    
+    // Auto-focus en la contraseña
+    setTimeout(() => {
+        if (inputPassword && inputPassword.value === '') {
+            inputPassword.focus();
         }
-    } catch (error) {
-        console.error('❌ No se pudo conectar al servidor:', error);
+    }, 500);
+    
+    // Agregar estilos CSS para animaciones
+    const estilos = document.createElement('style');
+    estilos.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    `;
+    document.head.appendChild(estilos);
+});
+
+// Función para cerrar sesión (se usa en Main.html)
+function cerrarSesion() {
+    localStorage.removeItem('usuario_logueado');
+    localStorage.removeItem('sesion_activa');
+    mostrarNotificacion('👋 Sesión cerrada', 'info');
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 1000);
+}
+
+// Función para verificar sesión (se usa en Main.html)
+function verificarSesion() {
+    const usuario = localStorage.getItem('usuario_logueado');
+    const sesionActiva = localStorage.getItem('sesion_activa');
+    
+    if (usuario !== USUARIO_VALIDO || sesionActiva !== 'true') {
+        console.log('❌ No hay sesión activa, redirigiendo...');
+        window.location.href = 'index.html';
         return false;
     }
+    return true;
 }
-
-// Ejecutar test de conexión al cargar la página
-setTimeout(() => {
-    testConexion();
-}, 1000);

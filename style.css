@@ -602,3 +602,170 @@ input[type="date"]{
         grid-column: span 1;
     }
 }
+
+/* ================================================
+   ESTILOS PARA EL LOGIN LOCAL
+   ================================================ */
+
+.cuerpo-login {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 20px;
+}
+
+.login-wrapper {
+    width: 100%;
+    max-width: 400px;
+}
+
+.tarjeta-acceso {
+    background: white;
+    padding: 40px 30px;
+    border-radius: 12px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    border-top: 4px solid #007bff;
+}
+
+.login-titulo {
+    color: #001f3f;
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.login-subtitulo {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.campo-grupo {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.etiqueta-login {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+#usuario, #password {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: all 0.3s;
+}
+
+#usuario:focus, #password:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+#botonEntrar {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 10px;
+}
+
+#botonEntrar:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+}
+
+#botonEntrar:active {
+    transform: translateY(0);
+}
+
+.login-footer {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    font-size: 13px;
+    color: #666;
+}
+
+.login-footer a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.login-footer a:hover {
+    text-decoration: underline;
+}
+
+/* ================================================
+   ESTILOS RESPONSIVE
+   ================================================ */
+
+@media (max-width: 480px) {
+    .tarjeta-acceso {
+        padding: 30px 20px;
+    }
+    
+    .login-titulo {
+        font-size: 24px;
+    }
+    
+    .dashboard {
+        flex-direction: column;
+        padding: 20px;
+    }
+    
+    .columna-izquierda,
+    .columna-derecha {
+        width: 100%;
+    }
+}
+
+/* ================================================
+   ESTILOS PARA BOTONES DEL HEADER
+   ================================================ */
+
+header {
+    position: relative;
+    padding-right: 120px !important;
+}
+
+.btn-logout {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    padding: 8px 15px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.btn-logout:hover {
+    background: #c82333;
+    transform: translateY(-50%) scale(1.05);
+}
