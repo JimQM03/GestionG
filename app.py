@@ -18,7 +18,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
 CORS(app, supports_credentials=True)
 
 # Configuración de email
-EMAIL_USER = os.environ.get("EMAIL_USER", "gestiong2026@gmail.com")
+EMAIL_USER = os.environ.get("EMAIL_USER", "jimq293@gmail.com")
 EMAIL_PASS = os.environ.get("EMAIL_PASS", "fkafcgrkokwbyden")
 
 print("=" * 60)
