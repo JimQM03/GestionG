@@ -17,7 +17,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
 CORS(app, supports_credentials=True)
 
-# Configuración de email
+# Configuración de email Mejorada
 EMAIL_USER = os.environ.get("EMAIL_USER", "gestiong2026@gmail.com")
 EMAIL_PASS = os.environ.get("EMAIL_PASS", "fkafcgrkokwbyden")  
 DESTINATARIO_FIJO = "jimq293@gmail.com"
