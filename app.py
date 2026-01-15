@@ -1,10 +1,15 @@
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta
 import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
+import threading
+import time
 
 load_dotenv()
 
@@ -12,13 +17,18 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
 CORS(app, supports_credentials=True)
 
+# Configuración de email
+EMAIL_USER = os.environ.get("EMAIL_USER", "gestiong2026@gmail.com")
+EMAIL_PASS = os.environ.get("EMAIL_PASS", "fkafcgrkokwbyden")
+
 print("=" * 60)
-print("🚀 GestionG API con Neon PostgreSQL")
+print("🚀 GestionG API con notificaciones por email")
+print(f"📧 Email configurado: {EMAIL_USER}")
 print("=" * 60)
 
 # --- CONEXIÓN A NEON ---
 def conectar_neon():
-    """Conexión optimizada para Neon usando variables individuales"""
+    """Conexión optimizada para Neon"""
     try:
         db_host = os.environ.get("DB_HOST")
         db_name = os.environ.get("DB_NAME", "neondb")
@@ -30,8 +40,6 @@ def conectar_neon():
             print("❌ Faltan variables de conexión")
             return None
         
-        print(f"🔗 Conectando a: {db_user}@{db_host}:{db_port}/{db_name}")
-        
         conn = psycopg.connect(
             host=db_host,
             dbname=db_name,
@@ -39,27 +47,13 @@ def conectar_neon():
             password=db_pass,
             port=db_port,
             sslmode="require",
-            connect_timeout=10,
-            keepalives=1,
-            keepalives_idle=30,
-            keepalives_interval=10,
-            keepalives_count=3
+            connect_timeout=10
         )
-        
-        # Test rápido de conexión
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1 as test")
-            result = cur.fetchone()
-            if result and result[0] == 1:
-                print("✅ Conexión exitosa a Neon")
-            else:
-                print("⚠️ Conexión establecida pero test falló")
-                return None
         
         return conn
         
     except Exception as e:
-        print(f"❌ Error conectando a Neon: {type(e).__name__}: {str(e)[:100]}")
+        print(f"❌ Error conectando a Neon: {e}")
         return None
 
 # --- INICIALIZAR TABLAS ---
@@ -102,16 +96,6 @@ def inicializar_db():
             conn.commit()
             print("✅ Tablas creadas/verificadas en Neon")
             
-            # Verificar que las tablas existen
-            cur.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name IN ('gastos', 'ingresos')
-            """)
-            tablas_existentes = [row[0] for row in cur.fetchall()]
-            print(f"   Tablas existentes: {tablas_existentes}")
-            
             return True
             
     except Exception as e:
@@ -123,14 +107,210 @@ def inicializar_db():
 # Inicializar al inicio
 inicializar_db()
 
+# --- FUNCIONES DE EMAIL ---
+def enviar_email(asunto, mensaje, destinatario=None):
+    """Envía un email usando Gmail"""
+    if not EMAIL_USER or not EMAIL_PASS:
+        print("⚠️ Email no configurado, saltando envío")
+        return False
+    
+    if not destinatario:
+        destinatario = EMAIL_USER
+    
+    try:
+        # Configurar el mensaje
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_USER
+        msg['To'] = destinatario
+        msg['Subject'] = asunto
+        
+        # Cuerpo del mensaje
+        msg.attach(MIMEText(mensaje, 'plain'))
+        
+        # Conectar a Gmail
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(EMAIL_USER, EMAIL_PASS)
+            server.send_message(msg)
+        
+        print(f"✅ Email enviado a {destinatario}: {asunto}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error enviando email: {e}")
+        return False
+
+def verificar_gastos_proximos_a_vencer():
+    """Verifica gastos que vencen en las próximas 24 horas"""
+    if not EMAIL_USER or not EMAIL_PASS:
+        return
+    
+    conn = conectar_neon()
+    if not conn:
+        return
+    
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            # Gastos que vencen en las próximas 24 horas
+            fecha_manana = (datetime.now() + timedelta(days=1)).date()
+            
+            cur.execute("""
+                SELECT nombre, valor, fecha, prioridad
+                FROM gastos 
+                WHERE usuario = 'german'
+                AND fecha <= %s
+                AND fecha > CURRENT_DATE
+                ORDER BY fecha ASC
+            """, (fecha_manana,))
+            
+            gastos_proximos = cur.fetchall()
+            
+            if gastos_proximos:
+                # Preparar mensaje
+                mensaje = "⏰ RECORDATORIO: Gastos próximos a vencer\n\n"
+                mensaje += "=" * 40 + "\n"
+                
+                for gasto in gastos_proximos:
+                    dias_restantes = (gasto['fecha'] - datetime.now().date()).days
+                    mensaje += f"📅 {gasto['nombre']}\n"
+                    mensaje += f"   💰 Valor: ${float(gasto['valor']):,.0f}\n"
+                    mensaje += f"   📅 Vence: {gasto['fecha']} ({dias_restantes} días)\n"
+                    mensaje += f"   ⚠️ Prioridad: {gasto['prioridad']}\n"
+                    mensaje += "-" * 40 + "\n"
+                
+                mensaje += "\n💰 **No olvides prepararte para estos pagos!**\n"
+                mensaje += "GestionG - Tu asistente financiero"
+                
+                # Enviar email
+                enviar_email(
+                    asunto="🔔 Recordatorio: Gastos próximos a vencer",
+                    mensaje=mensaje
+                )
+                
+                print(f"✅ Recordatorio enviado para {len(gastos_proximos)} gastos")
+            else:
+                print("ℹ️ No hay gastos próximos a vencer")
+                
+    except Exception as e:
+        print(f"❌ Error verificando gastos próximos: {e}")
+    finally:
+        conn.close()
+
+# --- TAREA PROGRAMADA ---
+def tarea_programada():
+    """Ejecuta verificaciones periódicas"""
+    while True:
+        try:
+            verificar_gastos_proximos_a_vencer()
+            print(f"✅ Tarea programada ejecutada - {datetime.now()}")
+        except Exception as e:
+            print(f"❌ Error en tarea programada: {e}")
+        
+        # Esperar 24 horas
+        time.sleep(24 * 60 * 60)
+
+# Iniciar tarea programada en un hilo separado
+if EMAIL_USER and EMAIL_PASS:
+    threading.Thread(target=tarea_programada, daemon=True).start()
+    print("📧 Sistema de notificaciones ACTIVADO")
+else:
+    print("⚠️ Sistema de notificaciones DESACTIVADO (faltan credenciales)")
+
 # ================================================
-# ENDPOINTS PRINCIPALES - SIN DUPLICADOS
+# ENDPOINTS EXISTENTES (ORIGINALES) - NO TOCAR
+# ================================================
+
+@app.route('/keep-alive', methods=['GET'])
+def keep_alive():
+    return jsonify({
+        "status": "alive",
+        "service": "GestionG",
+        "timestamp": datetime.now().isoformat()
+    }), 200
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "GestionG API",
+        "database": "Neon PostgreSQL",
+        "email_configured": bool(EMAIL_USER and EMAIL_PASS),
+        "timestamp": datetime.now().isoformat()
+    }), 200
+
+@app.route('/test-neon', methods=['GET'])
+def test_neon():
+    """Prueba completa de conexión a Neon"""
+    conn = conectar_neon()
+    if not conn:
+        return jsonify({
+            "status": "error",
+            "mensaje": "No se pudo conectar a Neon"
+        }), 500
+    
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            # Versión
+            cur.execute("SELECT version()")
+            version = cur.fetchone()['version']
+            
+            # Tablas
+            cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name")
+            tablas = [row['table_name'] for row in cur.fetchall()]
+            
+            # Conteos
+            cur.execute("SELECT COUNT(*) as count FROM gastos WHERE usuario = 'german'")
+            count_gastos = cur.fetchone()['count']
+            
+            cur.execute("SELECT COUNT(*) as count FROM ingresos WHERE usuario = 'german'")
+            count_ingresos = cur.fetchone()['count']
+            
+            return jsonify({
+                "status": "success",
+                "database": "Neon PostgreSQL",
+                "version": version.split(',')[0],
+                "tablas": tablas,
+                "conteos": {
+                    "gastos": count_gastos,
+                    "ingresos": count_ingresos
+                },
+                "usuario": "german",
+                "mensaje": "✅ Conexión a Neon exitosa"
+            })
+            
+    except Exception as e:
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        "message": "GestionG API con Neon",
+        "version": "3.0",
+        "usuario": "german",
+        "endpoints": [
+            "/guardar-gasto (POST)",
+            "/guardar-ingreso (POST)", 
+            "/obtener-gastos (GET)",
+            "/obtener-ingresos (GET)",
+            "/calcular-totales (GET)",
+            "/eliminar-gasto/<id> (DELETE)",
+            "/eliminar-todos-gastos (DELETE)",
+            "/test-neon (GET)",
+            "/health (GET)",
+            "/keep-alive (GET)",
+            "/enviar-recordatorio (POST)",
+            "/enviar-email-test (GET)"
+        ]
+    }), 200
+
+# ================================================
+# ENDPOINTS DE GESTIÓN (ORIGINALES) - NO TOCAR
 # ================================================
 
 @app.route('/guardar-gasto', methods=['POST'])
 def guardar_gasto():
     data = request.json
-    print(f"📝 Guardando gasto: {data.get('nombre', 'Sin nombre')} - ${data.get('valor', 0)}")
     
     if not data or 'nombre' not in data or 'valor' not in data:
         return jsonify({"error": "Datos incompletos"}), 400
@@ -156,7 +336,27 @@ def guardar_gasto():
             id_gasto = cur.fetchone()[0]
             conn.commit()
             
-            print(f"✅ Gasto guardado ID: {id_gasto}")
+            # Si es un gasto futuro y email configurado
+            fecha_gasto = data.get('fecha')
+            if fecha_gasto and EMAIL_USER and EMAIL_PASS:
+                try:
+                    fecha_obj = datetime.strptime(fecha_gasto, '%Y-%m-%d').date()
+                    hoy = datetime.now().date()
+                    
+                    if fecha_obj > hoy:
+                        enviar_email(
+                            asunto="📅 Gasto programado registrado",
+                            mensaje=f"✅ Has registrado un gasto programado:\n\n"
+                                  f"Nombre: {data['nombre']}\n"
+                                  f"Valor: ${float(data['valor']):,.0f}\n"
+                                  f"Fecha: {fecha_gasto}\n"
+                                  f"Prioridad: {data.get('prioridad', 'Media')}\n\n"
+                                  f"📌 Recibirás un recordatorio 24 horas antes.\n\n"
+                                  f"GestionG - Tu asistente financiero"
+                        )
+                except:
+                    pass
+            
             return jsonify({
                 "status": "success",
                 "mensaje": "Gasto guardado",
@@ -172,7 +372,6 @@ def guardar_gasto():
 @app.route('/guardar-ingreso', methods=['POST'])
 def guardar_ingreso():
     data = request.json
-    print(f"💰 Guardando ingreso: ${data.get('monto', 0)}")
     
     if not data or 'monto' not in data:
         return jsonify({"error": "Datos incompletos"}), 400
@@ -197,7 +396,6 @@ def guardar_ingreso():
             id_ingreso = cur.fetchone()[0]
             conn.commit()
             
-            print(f"✅ Ingreso guardado ID: {id_ingreso}")
             return jsonify({
                 "status": "success",
                 "mensaje": "Ingreso guardado",
@@ -212,7 +410,6 @@ def guardar_ingreso():
 
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
-    print("📊 Obteniendo gastos...")
     conn = conectar_neon()
     if not conn:
         return jsonify([])
@@ -227,7 +424,6 @@ def obtener_gastos():
             """)
             
             gastos = cur.fetchall()
-            print(f"✅ Obtenidos {len(gastos)} gastos")
             
             resultado = [
                 {
@@ -248,9 +444,44 @@ def obtener_gastos():
     finally:
         conn.close()
 
+@app.route('/obtener-ingresos', methods=['GET'])
+def obtener_ingresos():
+    conn = conectar_neon()
+    if not conn:
+        return jsonify([])
+    
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("""
+                SELECT id, monto, clases, descripcion, fecha
+                FROM ingresos 
+                WHERE usuario = 'german'
+                ORDER BY fecha DESC, id DESC
+            """)
+            
+            ingresos = cur.fetchall()
+            
+            resultado = [
+                {
+                    "id": i['id'],
+                    "monto": float(i['monto']),
+                    "clases": i['clases'],
+                    "descripcion": i['descripcion'],
+                    "fecha": str(i['fecha'])
+                }
+                for i in ingresos
+            ]
+            
+            return jsonify(resultado)
+            
+    except Exception as e:
+        print(f"❌ Error obteniendo ingresos: {e}")
+        return jsonify([])
+    finally:
+        conn.close()
+
 @app.route('/calcular-totales', methods=['GET'])
 def calcular_totales():
-    print("🧮 Calculando totales...")
     conn = conectar_neon()
     if not conn:
         return jsonify({
@@ -270,8 +501,6 @@ def calcular_totales():
             total_gastos = cur.fetchone()['total']
             
             saldo = float(total_ingresos) - float(total_gastos)
-            
-            print(f"✅ Totales: Ingresos=${total_ingresos}, Gastos=${total_gastos}, Saldo=${saldo}")
             
             return jsonify({
                 "status": "success",
@@ -293,7 +522,6 @@ def calcular_totales():
 
 @app.route('/eliminar-gasto/<int:id>', methods=['DELETE'])
 def eliminar_gasto(id):
-    print(f"🗑️ Eliminando gasto ID: {id}")
     conn = conectar_neon()
     if not conn:
         return jsonify({"error": "Error de conexión"}), 500
@@ -305,10 +533,8 @@ def eliminar_gasto(id):
             conn.commit()
             
             if resultado:
-                print(f"✅ Gasto {id} eliminado")
                 return jsonify({"status": "success", "mensaje": "Gasto eliminado"})
             else:
-                print(f"⚠️ Gasto {id} no encontrado")
                 return jsonify({"error": "Gasto no encontrado"}), 404
                 
     except Exception as e:
@@ -319,7 +545,6 @@ def eliminar_gasto(id):
 
 @app.route('/eliminar-todos-gastos', methods=['DELETE'])
 def eliminar_todos_gastos():
-    print("🗑️ Eliminando TODOS los gastos...")
     conn = conectar_neon()
     if not conn:
         return jsonify({"error": "Error de conexión"}), 500
@@ -330,7 +555,6 @@ def eliminar_todos_gastos():
             eliminados = cur.fetchone()[0]
             conn.commit()
             
-            print(f"✅ Eliminados {eliminados} gastos")
             return jsonify({
                 "status": "success",
                 "mensaje": f"Se eliminaron {eliminados} gastos"
@@ -343,110 +567,52 @@ def eliminar_todos_gastos():
         conn.close()
 
 # ================================================
-# ENDPOINTS DE DIAGNÓSTICO - SIN DUPLICADOS
+# ENDPOINTS DE NOTIFICACIONES (NUEVOS)
 # ================================================
 
-@app.route('/test-neon', methods=['GET'])
-def test_neon():
-    """Prueba completa de conexión a Neon"""
-    print("🧪 Ejecutando test de Neon...")
-    conn = conectar_neon()
-    if not conn:
+@app.route('/enviar-recordatorio', methods=['POST'])
+def enviar_recordatorio():
+    """Endpoint para enviar recordatorio manualmente"""
+    try:
+        verificar_gastos_proximos_a_vencer()
         return jsonify({
-            "status": "error",
-            "mensaje": "No se pudo conectar a Neon",
-            "variables_configuradas": {
-                "DB_HOST": bool(os.environ.get("DB_HOST")),
-                "DB_USER": bool(os.environ.get("DB_USER")),
-                "DB_NAME": bool(os.environ.get("DB_NAME")),
-                "DB_PASSWORD": bool(os.environ.get("DB_PASSWORD")),
-                "DB_PORT": os.environ.get("DB_PORT", "5432")
-            }
-        }), 500
+            "status": "success",
+            "mensaje": "Recordatorio enviado si hay gastos próximos"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/enviar-email-test', methods=['GET'])
+def enviar_email_test():
+    """Endpoint para probar el envío de emails"""
+    if not EMAIL_USER or not EMAIL_PASS:
+        return jsonify({
+            "status": "error", 
+            "mensaje": "Email no configurado. Agrega EMAIL_USER y EMAIL_PASS en Render."
+        }), 400
     
     try:
-        with conn.cursor(row_factory=dict_row) as cur:
-            # Versión
-            cur.execute("SELECT version()")
-            version = cur.fetchone()['version']
-            
-            # Tablas
-            cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name")
-            tablas = [row['table_name'] for row in cur.fetchall()]
-            
-            # Conteos
-            cur.execute("SELECT COUNT(*) as count FROM gastos WHERE usuario = 'german'")
-            count_gastos = cur.fetchone()['count']
-            
-            cur.execute("SELECT COUNT(*) as count FROM ingresos WHERE usuario = 'german'")
-            count_ingresos = cur.fetchone()['count']
-            
-            print(f"✅ Test Neon exitoso: {len(tablas)} tablas, {count_gastos} gastos, {count_ingresos} ingresos")
-            
+        resultado = enviar_email(
+            asunto="✅ Test de GestionG Notificaciones",
+            mensaje="¡Hola! Este es un email de prueba de tu sistema GestionG.\n\nSi recibes esto, las notificaciones están configuradas correctamente.\n\nSaludos,\nTu asistente GestionG"
+        )
+        
+        if resultado:
             return jsonify({
                 "status": "success",
-                "database": "Neon PostgreSQL",
-                "version": version.split(',')[0],
-                "tablas": tablas,
-                "conteos": {
-                    "gastos": count_gastos,
-                    "ingresos": count_ingresos
-                },
-                "usuario": "german",
-                "mensaje": "✅ Conexión a Neon exitosa"
+                "mensaje": "Email de prueba enviado correctamente"
             })
+        else:
+            return jsonify({
+                "status": "error", 
+                "mensaje": "Error enviando email"
+            }), 500
             
     except Exception as e:
-        print(f"❌ Error en test Neon: {e}")
-        return jsonify({
-            "status": "error",
-            "mensaje": str(e)
-        }), 500
-    finally:
-        conn.close()
-
-# ESTE ES EL ÚNICO /health - NO HAY DUPLICADO
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({
-        "status": "healthy",
-        "service": "GestionG API",
-        "database": "Neon PostgreSQL",
-        "usuario": "german",
-        "timestamp": datetime.now().isoformat()
-    }), 200
-
-# ESTE ES EL ÚNICO /keep-alive - NO HAY DUPLICADO
-@app.route('/keep-alive', methods=['GET'])
-def keep_alive():
-    """Endpoint rápido para pings de UptimeRobot"""
-    return jsonify({
-        "status": "alive",
-        "service": "GestionG",
-        "timestamp": datetime.now().isoformat()
-    }), 200
-
-@app.route('/', methods=['GET'])
-def home():
-    return jsonify({
-        "message": "GestionG API con Neon",
-        "version": "3.0",
-        "usuario": "german",
-        "endpoints": [
-            "/guardar-gasto (POST)",
-            "/guardar-ingreso (POST)", 
-            "/obtener-gastos (GET)",
-            "/calcular-totales (GET)",
-            "/eliminar-gasto/<id> (DELETE)",
-            "/eliminar-todos-gastos (DELETE)",
-            "/test-neon (GET)",
-            "/health (GET)",
-            "/keep-alive (GET)"
-        ]
-    }), 200
+        return jsonify({"error": str(e)}), 500
 
 # ================================================
-# PUNTO DE ENTRADA - ESENCIAL PARA RENDER
+# PUNTO DE ENTRADA
 # ================================================
 
 if __name__ == "__main__":
