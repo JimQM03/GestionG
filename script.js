@@ -195,76 +195,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('botonCalcularGastos')?.addEventListener('click', async () => {
-        // --- 1. CAPTURAR DATOS ---
+        // 1. Obtener la fecha única
+        const fechaUnica = document.getElementById('fecha-global-registro')?.value;
+
+        // 2. Obtener los valores numéricos y descripción
         const descGasto = document.getElementById('desc-gasto')?.value.trim();
         const valorGasto = document.getElementById('valor-gasto-real')?.value;
-        const fechaEspecial = document.getElementById('fecha-gasto-real')?.value;
 
         const vCompras = document.getElementById('gasto-compras')?.value;
         const vAntojos = document.getElementById('gasto-antojos')?.value;
-        const fechaVar = document.getElementById('fecha-grupo-variables')?.value;
-
         const dCorto = document.getElementById('deuda-corto')?.value;
         const dLargo = document.getElementById('deuda-largo')?.value;
-        const fechaDeu = document.getElementById('fecha-grupo-deudas')?.value;
 
-        // --- 2. VALIDACIÓN DE VACÍO TOTAL ---
-        const estaTodoVacio = !descGasto && !valorGasto && 
-                            (!vCompras || vCompras <= 0) && 
-                            (!vAntojos || vAntojos <= 0) && 
-                            (!dCorto || dCorto <= 0) && 
-                            (!dLargo || dLargo <= 0);
-
-        if (estaTodoVacio) {
-            return mostrarNotificacion('❌ Error: No has ingresado ningún dato válido', 'error');
+        // 3. Validación de vacío
+        if (!descGasto && !valorGasto && !vCompras && !vAntojos && !dCorto && !dLargo) {
+            return mostrarNotificacion('❌ Error: No hay datos para registrar', 'error');
         }
 
-        // --- 3. PROCESO DE GUARDADO CON CONTROL DE ERRORES ---
         try {
-            mostrarNotificacion('⏳ Procesando registros...', 'success');
+            mostrarNotificacion('⏳ Guardando...');
 
-            // Creamos un array para ejecutar todas las promesas
-            // Esto ayuda a que si una falla, sepamos que hubo un problema
+            // 4. Enviar registros usando SIEMPRE la misma fecha
             if (descGasto && valorGasto) {
-                await registrarGastoEspecial(descGasto, valorGasto, 'Media', fechaEspecial);
+                await registrarGastoEspecial(descGasto, valorGasto, 'Media', fechaUnica);
             }
+            if (vCompras > 0) await registrarGastoEspecial('Mercado', vCompras, 'Variable', fechaUnica);
+            if (vAntojos > 0) await registrarGastoEspecial('Antojos', vAntojos, 'Variable', fechaUnica);
+            if (dCorto > 0)   await registrarGastoEspecial('Deuda Celular', dCorto, 'Deuda', fechaUnica);
+            if (dLargo > 0)   await registrarGastoEspecial('Deuda Largo Plazo', dLargo, 'Deuda', fechaUnica);
 
-            if (vCompras > 0) {
-                await registrarGastoEspecial('Mercado', vCompras, 'Variable', fechaVar);
-            }
-            
-            if (vAntojos > 0) {
-                await registrarGastoEspecial('Antojos', vAntojos, 'Variable', fechaVar);
-            }
+            // 5. Limpiar campos numéricos y texto (pero puedes dejar la fecha por si vas a seguir registrando)
+            ['desc-gasto', 'valor-gasto-real', 'gasto-compras', 'gasto-antojos', 'deuda-corto', 'deuda-largo']
+            .forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
 
-            if (dCorto > 0) {
-                await registrarGastoEspecial('Deuda Celular', dCorto, 'Deuda', fechaDeu);
-            }
-
-            if (dLargo > 0) {
-                await registrarGastoEspecial('Deuda Largo Plazo', dLargo, 'Deuda', fechaDeu);
-            }
-
-            // --- 4. LIMPIEZA TOTAL (Solo ocurre si NO hubo error) ---
-            const idsALimpiar = [
-                'desc-gasto', 'valor-gasto-real', 'fecha-gasto-real',
-                'gasto-compras', 'gasto-antojos', 'fecha-grupo-variables',
-                'deuda-corto', 'deuda-largo', 'fecha-grupo-deudas'
-            ];
-            
-            idsALimpiar.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
-
-            // RECARGA DE INTERFAZ
             await cargarHistorial();
             await actualizarTotales();
-            mostrarNotificacion('✅ Historial actualizado correctamente');
+            mostrarNotificacion('✅ Registros guardados');
 
         } catch (error) {
-            console.error("Error en el proceso de guardado:", error);
-            mostrarNotificacion('❌ Error 500: Falló la comunicación con el servidor', 'error');
+            mostrarNotificacion('❌ Error al guardar en el servidor', 'error');
         }
     });
 

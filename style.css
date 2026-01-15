@@ -107,6 +107,11 @@ input:focus {
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
 
+/* Ajuste para que el input de fecha no se pegue al borde azul */
+#fecha-global-registro {
+    margin-top: 10px;
+}
+
 /* Filas de gastos: Une Fecha y Valor en una línea */
 .fila-gasto {
     display: flex;
