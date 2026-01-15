@@ -320,6 +320,13 @@ def guardar_gasto():
         return jsonify({"error": "Error de conexión a Neon"}), 500
     
     try:
+        # Validar la fecha: si viene vacía o nula, usar la fecha de hoy
+        fecha_input = data.get('fecha')
+        if not fecha_input or fecha_input == "":
+            fecha_final = datetime.now().date()
+        else:
+            fecha_final = fecha_input
+
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO gastos (usuario, nombre, valor, prioridad, fecha)
@@ -330,32 +337,11 @@ def guardar_gasto():
                 data['nombre'],
                 float(data['valor']),
                 data.get('prioridad', 'Media'),
-                data.get('fecha', datetime.now().date())
+                fecha_final
             ))
             
             id_gasto = cur.fetchone()[0]
             conn.commit()
-            
-            # Si es un gasto futuro y email configurado
-            fecha_gasto = data.get('fecha')
-            if fecha_gasto and EMAIL_USER and EMAIL_PASS:
-                try:
-                    fecha_obj = datetime.strptime(fecha_gasto, '%Y-%m-%d').date()
-                    hoy = datetime.now().date()
-                    
-                    if fecha_obj > hoy:
-                        enviar_email(
-                            asunto="📅 Gasto programado registrado",
-                            mensaje=f"✅ Has registrado un gasto programado:\n\n"
-                                  f"Nombre: {data['nombre']}\n"
-                                  f"Valor: ${float(data['valor']):,.0f}\n"
-                                  f"Fecha: {fecha_gasto}\n"
-                                  f"Prioridad: {data.get('prioridad', 'Media')}\n\n"
-                                  f"📌 Recibirás un recordatorio 24 horas antes.\n\n"
-                                  f"GestionG - Tu asistente financiero"
-                        )
-                except:
-                    pass
             
             return jsonify({
                 "status": "success",
@@ -551,13 +537,18 @@ def eliminar_todos_gastos():
     
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM gastos WHERE usuario = 'german' RETURNING COUNT(*)")
-            eliminados = cur.fetchone()[0]
+            # 1. Primero contamos cuántos hay (opcional, para el mensaje)
+            cur.execute("SELECT COUNT(*) FROM gastos WHERE usuario = 'german'")
+            total = cur.fetchone()[0]
+            
+            # 2. Borramos sin el RETURNING COUNT(*) que causaba el error
+            cur.execute("DELETE FROM gastos WHERE usuario = 'german'")
+            
             conn.commit()
             
             return jsonify({
                 "status": "success",
-                "mensaje": f"Se eliminaron {eliminados} gastos"
+                "mensaje": f"Se eliminaron {total} gastos correctamente"
             })
                 
     except Exception as e:
@@ -617,15 +608,8 @@ def enviar_email_test():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-<<<<<<< HEAD
-    print("🚀 Iniciando API de datos GestionG...")
-    print("📊 Endpoints de datos activos")
-    print(f"🌐 Escuchando en puerto {port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
 
-=======
     print("=" * 60)
     print(f"🚀 Servicio iniciado en puerto {port}")
     print("=" * 60)
     app.run(host='0.0.0.0', port=port, debug=False)
->>>>>>> c014a3b8fab69967f5bb9fa7e1531d1ca7ea5251

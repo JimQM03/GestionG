@@ -1,9 +1,31 @@
 // ================================================
-// SCRIPT.JS - FRONTEND (CON LOGS DE CONSOLA Y LIMPIEZA)
+// SCRIPT.JS (CON LOGS DE CONSOLA Y LIMPIEZA)
 // ================================================
 
 const API_URL = "https://gestiong-backend.onrender.com";
 
+// Función para verificar sesión (se usa en Main.html)
+function verificarSesion() {
+    const usuario = localStorage.getItem('usuario_logueado');
+    const sesionActiva = localStorage.getItem('sesion_activa');
+    
+    if (usuario !== USUARIO_VALIDO || sesionActiva !== 'true') {
+        console.log('❌ No hay sesión activa, redirigiendo...');
+        window.location.href = 'index.html';
+        return false;
+    }
+    return true;
+}
+
+// Función para cerrar sesión
+function cerrarSesion() {
+    localStorage.removeItem('usuario_logueado');
+    localStorage.removeItem('sesion_activa');
+    mostrarNotificacion('👋 Sesión cerrada', 'info');
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 1000);
+}
 // --- SEGURIDAD Y SESIÓN ---
 (function() {
     console.log("🛠️ Verificando sesión del usuario...");
@@ -105,8 +127,12 @@ async function eliminarGasto(id) {
 }
 
 // --- ESTA FUNCIÓN CONECTA TUS INPUTS CON LA TABLA DE GASTOS ---
-async function registrarGastoEspecial(nombre, valor, tipo) {
-    console.log(`🚀 Registrando ${tipo}: ${nombre}`);
+async function registrarGastoEspecial(nombre, valor, tipo, fecha) {
+    // Si la fecha viene vacía, usamos la fecha de hoy en formato YYYY-MM-DD
+    const fechaFinal = fecha && fecha !== "" ? fecha : new Date().toISOString().split('T')[0];
+    
+    console.log(`🚀 Enviando: ${nombre} con fecha ${fechaFinal}`);
+
     try {
         const res = await fetch(`${API_URL}/guardar-gasto`, {
             method: 'POST',
@@ -114,20 +140,21 @@ async function registrarGastoEspecial(nombre, valor, tipo) {
             body: JSON.stringify({ 
                 nombre: nombre, 
                 valor: parseFloat(valor), 
-                fecha: new Date().toISOString().split('T')[0],
-                prioridad: tipo // Aquí es donde el backend sabe que es Variable o Deuda
+                fecha: fechaFinal, // Ahora garantizamos que nunca sea null/vacio
+                prioridad: tipo 
             })
         });
 
-        if (res.ok) {
-            mostrarNotificacion(`✅ ${tipo} registrada`);
-            await cargarHistorial(); // Refresca la tabla
-            await actualizarTotales(); // Refresca los números de arriba
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.mensaje || "Error en el servidor");
         }
     } catch (e) {
-        console.error("❌ Error:", e);
+        console.error("❌ Error en la petición POST:", e.message);
+        throw e; // Lanzamos el error para que el botón sepa que falló
     }
 }
+
 // --- INICIALIZACIÓN DE EVENTOS ---
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -167,73 +194,112 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error("❌ Error al guardar ingreso:", e.message); }
     });
 
-    // 2. CALCULAR GASTOS 
     document.getElementById('botonCalcularGastos')?.addEventListener('click', async () => {
-        // --- SEÑAL: AQUÍ DEFINIMOS LAS VARIABLES ---
-        const inputNombre = document.getElementById('desc-gasto');
-        const inputValor = document.getElementById('valor-gasto-real');
-        const inputFecha = document.getElementById('fecha-gasto-real');
-        
-        // Extraemos los valores antes de limpiar
-        const nombre = inputNombre?.value;
-        const valor = inputValor?.value;
-        const fecha = inputFecha?.value;
+        // --- 1. CAPTURAR DATOS ---
+        const descGasto = document.getElementById('desc-gasto')?.value.trim();
+        const valorGasto = document.getElementById('valor-gasto-real')?.value;
+        const fechaEspecial = document.getElementById('fecha-gasto-real')?.value;
 
-        if (!nombre || !valor) {
-            console.warn("⚠️ Intento de guardar gasto sin nombre o valor.");
-            return mostrarNotificacion('Nombre y Valor son obligatorios', 'error');
+        const vCompras = document.getElementById('gasto-compras')?.value;
+        const vAntojos = document.getElementById('gasto-antojos')?.value;
+        const fechaVar = document.getElementById('fecha-grupo-variables')?.value;
+
+        const dCorto = document.getElementById('deuda-corto')?.value;
+        const dLargo = document.getElementById('deuda-largo')?.value;
+        const fechaDeu = document.getElementById('fecha-grupo-deudas')?.value;
+
+        // --- 2. VALIDACIÓN DE VACÍO TOTAL ---
+        const estaTodoVacio = !descGasto && !valorGasto && 
+                            (!vCompras || vCompras <= 0) && 
+                            (!vAntojos || vAntojos <= 0) && 
+                            (!dCorto || dCorto <= 0) && 
+                            (!dLargo || dLargo <= 0);
+
+        if (estaTodoVacio) {
+            return mostrarNotificacion('❌ Error: No has ingresado ningún dato válido', 'error');
         }
 
-        // --- SEÑAL: LIMPIEZA INSTANTÁNEA (AQUÍ SE USA inputNombre) ---
-        console.log("⚡ Limpiando interfaz de inmediato...");
-        if (inputNombre) inputNombre.value = '';
-        if (inputValor) inputValor.value = '';
-        if (inputFecha) inputFecha.value = '';
-        
-        mostrarNotificacion('⏳ Procesando gasto...');
-
+        // --- 3. PROCESO DE GUARDADO CON CONTROL DE ERRORES ---
         try {
-            const res = await fetch(`${API_URL}/guardar-gasto`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    nombre, 
-                    valor: parseFloat(valor), 
-                    fecha: fecha || new Date().toISOString().split('T')[0],
-                    prioridad: "Media"
-                })
+            mostrarNotificacion('⏳ Procesando registros...', 'success');
+
+            // Creamos un array para ejecutar todas las promesas
+            // Esto ayuda a que si una falla, sepamos que hubo un problema
+            if (descGasto && valorGasto) {
+                await registrarGastoEspecial(descGasto, valorGasto, 'Media', fechaEspecial);
+            }
+
+            if (vCompras > 0) {
+                await registrarGastoEspecial('Mercado', vCompras, 'Variable', fechaVar);
+            }
+            
+            if (vAntojos > 0) {
+                await registrarGastoEspecial('Antojos', vAntojos, 'Variable', fechaVar);
+            }
+
+            if (dCorto > 0) {
+                await registrarGastoEspecial('Deuda Celular', dCorto, 'Deuda', fechaDeu);
+            }
+
+            if (dLargo > 0) {
+                await registrarGastoEspecial('Deuda Largo Plazo', dLargo, 'Deuda', fechaDeu);
+            }
+
+            // --- 4. LIMPIEZA TOTAL (Solo ocurre si NO hubo error) ---
+            const idsALimpiar = [
+                'desc-gasto', 'valor-gasto-real', 'fecha-gasto-real',
+                'gasto-compras', 'gasto-antojos', 'fecha-grupo-variables',
+                'deuda-corto', 'deuda-largo', 'fecha-grupo-deudas'
+            ];
+            
+            idsALimpiar.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
             });
 
-            if (res.ok) {
-                console.log("✅ Servidor actualizado.");
-                await cargarHistorial();
-                await actualizarTotales();
-            } else {
-                throw new Error("Error en la respuesta del servidor");
-            }
-        } catch (e) { 
-            console.error("❌ Error en la petición:", e.message);
-            mostrarNotificacion('❌ Error al guardar', 'error');
-            
-            // Si falla, devolvemos los valores para no perder la información
-            if (inputNombre) inputNombre.value = nombre;
-            if (inputValor) inputValor.value = valor;
+            // RECARGA DE INTERFAZ
+            await cargarHistorial();
+            await actualizarTotales();
+            mostrarNotificacion('✅ Historial actualizado correctamente');
+
+        } catch (error) {
+            console.error("Error en el proceso de guardado:", error);
+            mostrarNotificacion('❌ Error 500: Falló la comunicación con el servidor', 'error');
         }
     });
 
-    // 3. BORRAR TODO EL HISTORIAL
+    // 3. BORRAR TODO EL HISTORIAL (CON MANEJO DE ERROR 500)
     document.getElementById('botonBorrarHistorial')?.addEventListener('click', async () => {
-        console.log("🖱️ Clic en Borrar Historial.");
-        if (!confirm('⚠️ ¿BORRAR TODO EL HISTORIAL?')) return;
+        console.log("🖱️ Intento de borrado total iniciado.");
+        
+        if (!confirm('⚠️ ¿ESTÁS SEGURO? Esta acción borrará TODOS los registros permanentemente.')) return;
+
         try {
-            const res = await fetch(`${API_URL}/eliminar-todos-gastos`, { method: 'DELETE' });
+            mostrarNotificacion('⏳ Borrando historial...', 'success');
+
+            const res = await fetch(`${API_URL}/eliminar-todos-gastos`, { 
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
             if (res.ok) {
-                console.log("✅ Historial vaciado por completo.");
-                mostrarNotificacion('🗑️ Historial vaciado');
-                await cargarHistorial(); // Esto limpiará la tabla visualmente
+                console.log("✅ Servidor: Historial vaciado.");
+                mostrarNotificacion('🗑️ Historial vaciado con éxito');
+                
+                // Refrescamos la interfaz para mostrar que está vacío
+                await cargarHistorial();
                 await actualizarTotales();
+            } else {
+                // Si el servidor responde con 500, capturamos el mensaje de error
+                const errorData = await res.json().catch(() => ({})); 
+                console.error("❌ Error del servidor (500):", errorData);
+                throw new Error(errorData.mensaje || 'Error interno del servidor al borrar');
             }
-        } catch (e) { console.error("❌ Error al borrar historial:", e.message); }
+
+        } catch (e) {
+            console.error("❌ Fallo total en la operación:", e.message);
+            mostrarNotificacion('❌ Error: No se pudo borrar el historial. Intenta más tarde.', 'error');
+        }
     });
 
     // 4. EXPORTAR A CSV
@@ -258,53 +324,5 @@ document.addEventListener('DOMContentLoaded', () => {
         a.download = `Reporte_${new Date().getTime()}.csv`;
         a.click();
         console.log("✅ Archivo CSV generado.");
-    });
-
-    //  CALCULAR GASTOS (Esta función ahora procesa TODO: Especiales, Variables y Deudas)
-    document.getElementById('botonCalcularGastos')?.addEventListener('click', async () => {
-
-        // --- OBTENER VALORES DE LOS CAMPOS ---
-        const descGasto = document.getElementById('desc-gasto')?.value;
-        const valorGasto = document.getElementById('valor-gasto-real')?.value;
-        const fechaGasto = document.getElementById('fecha-gasto-real')?.value;
-
-        const vCompras = document.getElementById('gasto-compras')?.value;
-        const vAntojos = document.getElementById('gasto-antojos')?.value;
-        const dCorto = document.getElementById('deuda-corto')?.value;
-        const dLargo = document.getElementById('deuda-largo')?.value;
-
-        mostrarNotificacion('⏳ Procesando registros...');
-
-        // --- FUNCIÓN INTERNA PARA EVITAR REPETIR CÓDIGO ---
-        const enviar = async (nombre, valor, tipo) => {
-            if (valor && parseFloat(valor) > 0) {
-                await registrarGastoEspecial(nombre, valor, tipo);
-            }
-        };
-
-        // --- PROCESAR CADA ENTRADA ---
-        // 1. Gasto Específico (el principal)
-        if (descGasto && valorGasto) {
-            await enviar(descGasto, valorGasto, 'Media');
-        }
-
-        // 2. Gastos Variables
-        await enviar('Mercado/Día a día', vCompras, 'Variable');
-        await enviar('Antojos y Salidas', vAntojos, 'Variable');
-
-        // 3. Deudas
-        await enviar('Deuda Corto Plazo', dCorto, 'Deuda');
-        await enviar('Deuda Largo Plazo', dLargo, 'Deuda');
-
-        // --- LIMPIEZA DE TODOS LOS CAMPOS ---
-        const idsALimpiar = ['desc-gasto', 'valor-gasto-real', 'fecha-gasto-real', 'gasto-compras', 'gasto-antojos', 'deuda-corto', 'deuda-largo'];
-        idsALimpiar.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-        });
-
-        // RECARGA FINAL
-        await cargarHistorial();
-        await actualizarTotales();
     });
 });

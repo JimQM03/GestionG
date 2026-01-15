@@ -164,25 +164,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(estilos);
 });
 
-// Función para cerrar sesión (se usa en Main.html)
-function cerrarSesion() {
-    localStorage.removeItem('usuario_logueado');
-    localStorage.removeItem('sesion_activa');
-    mostrarNotificacion('👋 Sesión cerrada', 'info');
-    setTimeout(() => {
-        window.location.href = 'index.html';
-    }, 1000);
-}
 
-// Función para verificar sesión (se usa en Main.html)
-function verificarSesion() {
-    const usuario = localStorage.getItem('usuario_logueado');
-    const sesionActiva = localStorage.getItem('sesion_activa');
-    
-    if (usuario !== USUARIO_VALIDO || sesionActiva !== 'true') {
-        console.log('❌ No hay sesión activa, redirigiendo...');
-        window.location.href = 'index.html';
-        return false;
-    }
-    return true;
-}
