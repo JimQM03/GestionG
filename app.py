@@ -1,244 +1,291 @@
 import os
-from flask import Flask, request, jsonify, session
+import socket
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
-import psycopg  # ← CAMBIADO
-from psycopg import sql  # ← CAMBIADO
+import psycopg
+from psycopg.rows import dict_row
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
 
-# CORS (igual)
-CORS(app, 
-     resources={r"/*": {
-         "origins": [
-             "https://jimqm03.github.io", 
-             "https://jimqm03.github.io/GestionG",
-             "http://localhost:5500",
-             "http://localhost:8000"
-         ]
-     }}, 
-     supports_credentials=True)
+# CORS - Permitir todo para simplificar
+CORS(app, supports_credentials=True)
 
-# --- CONEXIÓN A DB (MODIFICADO) ---
+# --- CONEXIÓN SIMPLIFICADA A SUPABASE ---
 def conectar_db():
+    """Conexión simplificada solo para datos"""
     try:
         conn = psycopg.connect(
-            host=os.environ.get("DB_HOST"),
-            dbname=os.environ.get("DB_NAME"),
-            user=os.environ.get("DB_USER"),
+            host=os.environ.get("DB_HOST", "db.uxzhjsmhbsemuvhragmc.supabase.co"),
+            dbname=os.environ.get("DB_NAME", "postgres"),
+            user=os.environ.get("DB_USER", "postgres"),
             password=os.environ.get("DB_PASSWORD"),
-            port=int(os.environ.get("DB_PORT", 5432))
+            port=int(os.environ.get("DB_PORT", 5432)),
+            sslmode="require",
+            connect_timeout=10
         )
-        print("✅ Conexión exitosa a PostgreSQL con psycopg")
         return conn
     except Exception as e:
-        print(f"❌ Error DB: {e}")
+        print(f"❌ Error de conexión DB: {e}")
         return None
 
-# --- LOGIN (adaptado para psycopg) ---
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.json
-    u = data.get('usuario')
-    p = data.get('password')
+# --- ENDPOINTS PARA DATOS (sin autenticación compleja) ---
 
-    db = conectar_db()
-    if not db:
-        return jsonify({"status": "error", "mensaje": "Error de conexión DB"}), 500
-    
-    try:
-        cursor = db.cursor(row_factory=psycopg.rows.dict_row)  # Para obtener diccionarios
-        cursor.execute("SELECT * FROM usuarios WHERE nombre_usuario = %s", (u,))
-        user = cursor.fetchone()
-        
-        if user and user['contrasena'] == p:
-            session['usuario'] = user['nombre_usuario']
-            return jsonify({
-                "status": "success", 
-                "usuario": user['nombre_usuario']
-            }), 200
-        
-        return jsonify({"status": "error", "mensaje": "Usuario o contraseña incorrectos"}), 401
-        
-    except Exception as e:
-        return jsonify({"status": "error", "mensaje": str(e)}), 500
-    finally:
-        if db:
-            db.close()
-
-# --- LOGOUT ---
-@app.route('/logout', methods=['POST'])
-def logout():
-    session.pop('usuario', None)
-    return jsonify({"status": "success"})
-
-# --- GESTIÓN DE GASTOS ---
 @app.route('/guardar-gasto', methods=['POST'])
 def guardar_gasto():
-    usuario = session.get('usuario')
-    if not usuario: return jsonify({"error": "No autenticado"}), 401
-    
+    """Guarda un gasto en la base de datos"""
     data = request.json
+    
+    # Validaciones básicas
+    if not data or 'nombre' not in data or 'valor' not in data:
+        return jsonify({"error": "Datos incompletos"}), 400
+    
     db = conectar_db()
-    if not db: return jsonify({"status": "error"}), 500
+    if not db:
+        return jsonify({"error": "Error de conexión DB"}), 500
     
     cursor = db.cursor()
     try:
         cursor.execute(
             "INSERT INTO gastos (usuario, nombre, valor, prioridad, fecha) VALUES (%s, %s, %s, %s, %s)",
-            (usuario, data['nombre'], data['valor'], data.get('prioridad', 'Media'), data['fecha'])
+            ("german", data['nombre'], data['valor'], data.get('prioridad', 'Media'), data.get('fecha', datetime.now().date()))
         )
         db.commit()
-        return jsonify({"status": "success"})
+        return jsonify({"status": "success", "mensaje": "Gasto guardado"})
     except Exception as e:
         print(f"Error: {e}")
-        return jsonify({"status": "error", "mensaje": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route('/guardar-ingreso', methods=['POST'])
+def guardar_ingreso():
+    """Guarda un ingreso en la base de datos"""
+    data = request.json
+    
+    if not data or 'monto' not in data:
+        return jsonify({"error": "Datos incompletos"}), 400
+    
+    db = conectar_db()
+    if not db:
+        return jsonify({"error": "Error de conexión DB"}), 500
+    
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO ingresos (usuario, monto, clases, descripcion, fecha) VALUES (%s, %s, %s, %s, %s)",
+            ("german", data['monto'], data.get('clases', 0), data.get('descripcion', ''), datetime.now().date())
+        )
+        db.commit()
+        return jsonify({"status": "success", "mensaje": "Ingreso guardado"})
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
     finally:
         db.close()
 
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
-    usuario = session.get('usuario')
-    if not usuario:
-        return jsonify({"error": "No autenticado"}), 401
-
+    """Obtiene todos los gastos del usuario"""
     db = conectar_db()
-    cursor = db.cursor()
-
+    if not db:
+        return jsonify([])
+    
+    cursor = db.cursor(row_factory=dict_row)
     try:
         cursor.execute(
-            "SELECT id, usuario, nombre, valor, prioridad, fecha "
-            "FROM gastos WHERE usuario = %s ORDER BY fecha DESC",
-            (usuario,)
+            "SELECT id, nombre, valor, prioridad, fecha FROM gastos WHERE usuario = 'german' ORDER BY fecha DESC"
         )
-
         gastos = cursor.fetchall()
-
+        
+        # Formatear respuesta
         gastos_json = [
             {
-                "id": g[0],
-                "usuario": g[1],
-                "nombre": g[2],
-                "valor": float(g[3]),
-                "prioridad": g[4],
-                "fecha": str(g[5])
+                "id": g['id'],
+                "nombre": g['nombre'],
+                "valor": float(g['valor']),
+                "prioridad": g['prioridad'],
+                "fecha": str(g['fecha'])
             }
             for g in gastos
         ]
-
+        
         return jsonify(gastos_json)
-
     except Exception as e:
-        print("Error obteniendo gastos:", e)
-        return jsonify({"error": "Error interno"}), 500
-
+        print(f"Error: {e}")
+        return jsonify([])
     finally:
         cursor.close()
         db.close()
 
-
-# --- GESTIÓN DE INGRESOS ---
-@app.route('/guardar-ingreso', methods=['POST'])
-def guardar_ingreso():
-    usuario = session.get('usuario')
-    if not usuario: return jsonify({"error": "No autenticado"}), 401
-    
-    data = request.json
+@app.route('/obtener-ingresos', methods=['GET'])
+def obtener_ingresos():
+    """Obtiene todos los ingresos del usuario"""
     db = conectar_db()
-    cursor = db.cursor()
+    if not db:
+        return jsonify([])
+    
+    cursor = db.cursor(row_factory=dict_row)
     try:
         cursor.execute(
-            "INSERT INTO ingresos (usuario, monto, clases, descripcion, fecha) VALUES (%s, %s, %s, %s, %s)",
-            (usuario, data['monto'], data.get('clases', 0), data.get('descripcion', ''), datetime.now().date())
+            "SELECT monto, clases, descripcion, fecha FROM ingresos WHERE usuario = 'german' ORDER BY fecha DESC"
         )
-        db.commit()
-        return jsonify({"status": "success"})
+        ingresos = cursor.fetchall()
+        return jsonify(ingresos)
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify([])
     finally:
+        cursor.close()
         db.close()
 
-# --- CÁLCULO DE SALDO ---
-@app.route('/calcular-saldo', methods=['GET'])
-def calcular_saldo():
-    usuario = session.get('usuario')
-    if not usuario: return jsonify({"error": "No autenticado"}), 401
-    
+@app.route('/calcular-totales', methods=['GET'])
+def calcular_totales():
+    """Calcula los totales de ingresos y gastos"""
     db = conectar_db()
-    cursor = db.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT SUM(monto) as total FROM ingresos WHERE usuario = %s", (usuario,))
-        total_ingresos = cursor.fetchone()['total'] or 0
-
-        cursor.execute("SELECT SUM(valor) as total FROM gastos WHERE usuario = %s", (usuario,))
-        total_gastos = cursor.fetchone()['total'] or 0
-
+    if not db:
         return jsonify({
-            "status": "success",
-            "saldo": float(total_ingresos - total_gastos),
+            "total_ingresos": 0,
+            "total_gastos": 0,
+            "saldo": 0
+        })
+    
+    cursor = db.cursor(row_factory=dict_row)
+    try:
+        # Total ingresos
+        cursor.execute("SELECT SUM(monto) as total FROM ingresos WHERE usuario = 'german'")
+        total_ingresos = cursor.fetchone()['total'] or 0
+        
+        # Total gastos
+        cursor.execute("SELECT SUM(valor) as total FROM gastos WHERE usuario = 'german'")
+        total_gastos = cursor.fetchone()['total'] or 0
+        
+        return jsonify({
             "total_ingresos": float(total_ingresos),
-            "total_gastos": float(total_gastos)
+            "total_gastos": float(total_gastos),
+            "saldo": float(total_ingresos - total_gastos)
+        })
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({
+            "total_ingresos": 0,
+            "total_gastos": 0,
+            "saldo": 0
         })
     finally:
+        cursor.close()
         db.close()
 
 @app.route('/eliminar-gasto/<int:id>', methods=['DELETE'])
 def eliminar_gasto(id):
-    usuario = session.get('usuario')
-    if not usuario: return jsonify({"error": "No autenticado"}), 401
-    
+    """Elimina un gasto específico"""
     db = conectar_db()
-    cursor = db.cursor()
-    cursor.execute("DELETE FROM gastos WHERE id = %s AND usuario = %s", (id, usuario))
-    db.commit()
-    db.close()
-    return jsonify({"status": "success"})
-
-# --- ELIMINAR EL HISTORIAL ---
-@app.route('/eliminar-historial', methods=['DELETE'])
-def eliminar_historial():
-    usuario = session.get('usuario')
-    if not usuario: 
-        return jsonify({"error": "No autenticado"}), 401
-    
-    db = conectar_db()
-    if not db: 
-        return jsonify({"status": "error", "mensaje": "Error de conexión"}), 500
+    if not db:
+        return jsonify({"error": "Error de conexión"}), 500
     
     cursor = db.cursor()
     try:
-        # Eliminamos solo los gastos que pertenecen al usuario logueado
-        cursor.execute("DELETE FROM gastos WHERE usuario = %s", (usuario,))
+        cursor.execute("DELETE FROM gastos WHERE id = %s AND usuario = 'german'", (id,))
         db.commit()
-        return jsonify({"status": "success", "mensaje": "Historial borrado en DB"})
+        
+        if cursor.rowcount > 0:
+            return jsonify({"status": "success", "mensaje": "Gasto eliminado"})
+        else:
+            return jsonify({"error": "Gasto no encontrado"}), 404
     except Exception as e:
-        print(f"Error al borrar historial: {e}")
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+@app.route('/eliminar-todos-gastos', methods=['DELETE'])
+def eliminar_todos_gastos():
+    """Elimina todos los gastos del usuario"""
+    db = conectar_db()
+    if not db:
+        return jsonify({"error": "Error de conexión"}), 500
+    
+    cursor = db.cursor()
+    try:
+        cursor.execute("DELETE FROM gastos WHERE usuario = 'german'")
+        db.commit()
+        return jsonify({"status": "success", "mensaje": "Todos los gastos eliminados"})
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+# --- ENDPOINTS DE DIAGNÓSTICO ---
+
+@app.route('/test-db', methods=['GET'])
+def test_db():
+    """Prueba la conexión a la base de datos"""
+    db = conectar_db()
+    if not db:
+        return jsonify({"status": "error", "mensaje": "No se pudo conectar a DB"}), 500
+    
+    cursor = db.cursor(row_factory=dict_row)
+    try:
+        cursor.execute("SELECT version()")
+        version = cursor.fetchone()['version']
+        
+        cursor.execute("SELECT COUNT(*) as count FROM gastos WHERE usuario = 'german'")
+        count_gastos = cursor.fetchone()['count']
+        
+        cursor.execute("SELECT COUNT(*) as count FROM ingresos WHERE usuario = 'german'")
+        count_ingresos = cursor.fetchone()['count']
+        
+        return jsonify({
+            "status": "success",
+            "database": "Supabase",
+            "version": version.split(',')[0] if ',' in version else version,
+            "gastos_registrados": count_gastos,
+            "ingresos_registrados": count_ingresos,
+            "mensaje": "✅ Conexión exitosa"
+        })
+    except Exception as e:
         return jsonify({"status": "error", "mensaje": str(e)}), 500
     finally:
         cursor.close()
         db.close()
 
-# === NUEVOS ENDPOINTS (AGREGAR ESTO) ===
-
-# --- VERIFICACIÓN DE SALUD ---
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "healthy", "service": "GestionG API"}), 200
+    return jsonify({
+        "status": "healthy",
+        "service": "GestionG API",
+        "version": "2.0",
+        "usuario": "german"
+    }), 200
 
-# --- PÁGINA DE INICIO ---
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({
-        "message": "GestionG API",
-        "version": "1.0",
-        "endpoints": ["/login", "/guardar-gasto", "/obtener-gastos", "/guardar-ingreso", "/calcular-saldo"]
+        "message": "GestionG API - Solo datos",
+        "endpoints": [
+            "/guardar-gasto (POST)",
+            "/guardar-ingreso (POST)",
+            "/obtener-gastos (GET)",
+            "/obtener-ingresos (GET)",
+            "/calcular-totales (GET)",
+            "/eliminar-gasto/<id> (DELETE)",
+            "/eliminar-todos-gastos (DELETE)",
+            "/test-db (GET)",
+            "/health (GET)"
+        ],
+        "note": "Login manejado localmente en el frontend"
     }), 200
 
-# ========================================
-
-# SIEMPRE DEBE IR AL FINAL
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    print("🚀 Iniciando API de datos GestionG...")
+    print("📊 Endpoints de datos activos")
+    print(f"🌐 Escuchando en puerto {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
+
