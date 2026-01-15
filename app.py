@@ -18,12 +18,14 @@ app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
 CORS(app, supports_credentials=True)
 
 # Configuración de email
-EMAIL_USER = os.environ.get("EMAIL_USER", "jimq293@gmail.com")
-EMAIL_PASS = os.environ.get("EMAIL_PASS", "fkafcgrkokwbyden")
+EMAIL_USER = os.environ.get("EMAIL_USER", "gestiong2026@gmail.com")
+EMAIL_PASS = os.environ.get("EMAIL_PASS", "fkafcgrkokwbyden")  
+DESTINATARIO_FIJO = "jimq293@gmail.com"
 
 print("=" * 60)
 print("🚀 GestionG API con notificaciones por email")
-print(f"📧 Email configurado: {EMAIL_USER}")
+print(f"📧 Remitente configurado: {EMAIL_USER}")
+print(f"📧 Destinatario fijo: {DESTINATARIO_FIJO}")
 print("=" * 60)
 
 # --- CONEXIÓN A NEON ---
@@ -37,7 +39,7 @@ def conectar_neon():
         db_port = int(os.environ.get("DB_PORT", 5432))
         
         if not all([db_host, db_user, db_pass]):
-            print("❌ Faltan variables de conexión")
+            print("❌ Faltan variables de conexión a Neon")
             return None
         
         conn = psycopg.connect(
@@ -50,6 +52,7 @@ def conectar_neon():
             connect_timeout=10
         )
         
+        print("✅ Conexión a Neon establecida")
         return conn
         
     except Exception as e:
@@ -114,8 +117,9 @@ def enviar_email(asunto, mensaje, destinatario=None):
         print("⚠️ Email no configurado, saltando envío")
         return False
     
+    # Usar destinatario fijo si no se especifica
     if not destinatario:
-        destinatario = EMAIL_USER
+        destinatario = DESTINATARIO_FIJO
     
     try:
         # Configurar el mensaje
@@ -125,16 +129,22 @@ def enviar_email(asunto, mensaje, destinatario=None):
         msg['Subject'] = asunto
         
         # Cuerpo del mensaje
-        msg.attach(MIMEText(mensaje, 'plain'))
+        msg.attach(MIMEText(mensaje, 'plain', 'utf-8'))
         
         # Conectar a Gmail
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(EMAIL_USER, EMAIL_PASS)
             server.send_message(msg)
         
-        print(f"✅ Email enviado a {destinatario}: {asunto}")
+        print(f"✅ Email enviado de {EMAIL_USER} a {destinatario}: {asunto}")
         return True
         
+    except smtplib.SMTPAuthenticationError:
+        print("❌ Error de autenticación SMTP: Credenciales incorrectas")
+        return False
+    except smtplib.SMTPException as e:
+        print(f"❌ Error SMTP: {e}")
+        return False
     except Exception as e:
         print(f"❌ Error enviando email: {e}")
         return False
@@ -142,10 +152,12 @@ def enviar_email(asunto, mensaje, destinatario=None):
 def verificar_gastos_proximos_a_vencer():
     """Verifica gastos que vencen en las próximas 24 horas"""
     if not EMAIL_USER or not EMAIL_PASS:
+        print("⚠️ Email no configurado, saltando verificación")
         return
     
     conn = conectar_neon()
     if not conn:
+        print("⚠️ No se pudo conectar a Neon para verificar gastos")
         return
     
     try:
@@ -158,7 +170,7 @@ def verificar_gastos_proximos_a_vencer():
                 FROM gastos 
                 WHERE usuario = 'german'
                 AND fecha <= %s
-                AND fecha > CURRENT_DATE
+                AND fecha >= CURRENT_DATE
                 ORDER BY fecha ASC
             """, (fecha_manana,))
             
@@ -167,7 +179,7 @@ def verificar_gastos_proximos_a_vencer():
             if gastos_proximos:
                 # Preparar mensaje
                 mensaje = "⏰ RECORDATORIO: Gastos próximos a vencer\n\n"
-                mensaje += "=" * 40 + "\n"
+                mensaje += "=" * 50 + "\n"
                 
                 for gasto in gastos_proximos:
                     dias_restantes = (gasto['fecha'] - datetime.now().date()).days
@@ -175,20 +187,22 @@ def verificar_gastos_proximos_a_vencer():
                     mensaje += f"   💰 Valor: ${float(gasto['valor']):,.0f}\n"
                     mensaje += f"   📅 Vence: {gasto['fecha']} ({dias_restantes} días)\n"
                     mensaje += f"   ⚠️ Prioridad: {gasto['prioridad']}\n"
-                    mensaje += "-" * 40 + "\n"
+                    mensaje += "-" * 50 + "\n"
                 
                 mensaje += "\n💰 **No olvides prepararte para estos pagos!**\n"
                 mensaje += "GestionG - Tu asistente financiero"
                 
                 # Enviar email
-                enviar_email(
+                if enviar_email(
                     asunto="🔔 Recordatorio: Gastos próximos a vencer",
-                    mensaje=mensaje
-                )
-                
-                print(f"✅ Recordatorio enviado para {len(gastos_proximos)} gastos")
+                    mensaje=mensaje,
+                    destinatario=DESTINATARIO_FIJO
+                ):
+                    print(f"✅ Recordatorio enviado para {len(gastos_proximos)} gastos")
+                else:
+                    print("⚠️ No se pudo enviar el recordatorio por email")
             else:
-                print("ℹ️ No hay gastos próximos a vencer")
+                print("ℹ️ No hay gastos próximos a vencer (próximas 24 horas)")
                 
     except Exception as e:
         print(f"❌ Error verificando gastos próximos: {e}")
@@ -198,25 +212,33 @@ def verificar_gastos_proximos_a_vencer():
 # --- TAREA PROGRAMADA ---
 def tarea_programada():
     """Ejecuta verificaciones periódicas"""
+    print("⏰ Iniciando tarea programada de notificaciones...")
+    
+    # Esperar 10 segundos para que la aplicación se inicie completamente
+    time.sleep(10)
+    
     while True:
         try:
+            print(f"⏰ Ejecutando verificación de gastos - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             verificar_gastos_proximos_a_vencer()
-            print(f"✅ Tarea programada ejecutada - {datetime.now()}")
         except Exception as e:
             print(f"❌ Error en tarea programada: {e}")
         
-        # Esperar 24 horas
-        time.sleep(24 * 60 * 60)
+        # Esperar 1 hora para pruebas, luego cambiar a 24 horas
+        print("⏰ Esperando 1 hora para siguiente verificación...")
+        time.sleep(60 * 60)  # 1 hora
 
 # Iniciar tarea programada en un hilo separado
 if EMAIL_USER and EMAIL_PASS:
-    threading.Thread(target=tarea_programada, daemon=True).start()
+    email_thread = threading.Thread(target=tarea_programada, daemon=True)
+    email_thread.start()
     print("📧 Sistema de notificaciones ACTIVADO")
+    print(f"📧 Email configurado: {EMAIL_USER}")
 else:
     print("⚠️ Sistema de notificaciones DESACTIVADO (faltan credenciales)")
 
 # ================================================
-# ENDPOINTS EXISTENTES (ORIGINALES) - NO TOCAR
+# ENDPOINTS
 # ================================================
 
 @app.route('/keep-alive', methods=['GET'])
@@ -224,7 +246,8 @@ def keep_alive():
     return jsonify({
         "status": "alive",
         "service": "GestionG",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "email_configured": bool(EMAIL_USER and EMAIL_PASS)
     }), 200
 
 @app.route('/health', methods=['GET'])
@@ -234,6 +257,8 @@ def health_check():
         "service": "GestionG API",
         "database": "Neon PostgreSQL",
         "email_configured": bool(EMAIL_USER and EMAIL_PASS),
+        "email_from": EMAIL_USER if EMAIL_USER else "No configurado",
+        "email_to": DESTINATARIO_FIJO,
         "timestamp": datetime.now().isoformat()
     }), 200
 
@@ -288,6 +313,11 @@ def home():
         "message": "GestionG API con Neon",
         "version": "3.0",
         "usuario": "german",
+        "notificaciones": {
+            "activo": bool(EMAIL_USER and EMAIL_PASS),
+            "desde": EMAIL_USER,
+            "hacia": DESTINATARIO_FIJO
+        },
         "endpoints": [
             "/guardar-gasto (POST)",
             "/guardar-ingreso (POST)", 
@@ -305,7 +335,7 @@ def home():
     }), 200
 
 # ================================================
-# ENDPOINTS DE GESTIÓN (ORIGINALES) - NO TOCAR
+# ENDPOINTS DE GESTIÓN
 # ================================================
 
 @app.route('/guardar-gasto', methods=['POST'])
@@ -320,14 +350,17 @@ def guardar_gasto():
         return jsonify({"error": "Error de conexión a Neon"}), 500
     
     try:
-        # Validar la fecha: si viene vacía o nula, usar la fecha de hoy
-        fecha_input = data.get('fecha')
-        if not fecha_input or fecha_input == "":
-            fecha_final = datetime.now().date()
-        else:
-            fecha_final = fecha_input
-
         with conn.cursor() as cur:
+            # Obtener fecha (hoy si no se especifica)
+            fecha_gasto = data.get('fecha')
+            if fecha_gasto:
+                try:
+                    fecha_obj = datetime.strptime(fecha_gasto, '%Y-%m-%d').date()
+                except ValueError:
+                    fecha_obj = datetime.now().date()
+            else:
+                fecha_obj = datetime.now().date()
+            
             cur.execute("""
                 INSERT INTO gastos (usuario, nombre, valor, prioridad, fecha)
                 VALUES (%s, %s, %s, %s, %s)
@@ -337,16 +370,33 @@ def guardar_gasto():
                 data['nombre'],
                 float(data['valor']),
                 data.get('prioridad', 'Media'),
-                fecha_final
+                fecha_obj
             ))
             
             id_gasto = cur.fetchone()[0]
             conn.commit()
             
+            # Si es un gasto futuro y email configurado, enviar confirmación
+            hoy = datetime.now().date()
+            if fecha_obj > hoy and EMAIL_USER and EMAIL_PASS:
+                enviar_email(
+                    asunto="📅 Gasto programado registrado",
+                    mensaje=f"✅ Has registrado un gasto programado:\n\n"
+                          f"📋 Nombre: {data['nombre']}\n"
+                          f"💰 Valor: ${float(data['valor']):,.0f}\n"
+                          f"📅 Fecha de vencimiento: {fecha_obj}\n"
+                          f"⚠️ Prioridad: {data.get('prioridad', 'Media')}\n\n"
+                          f"📌 Recibirás un recordatorio 24 horas antes.\n\n"
+                          f"GestionG - Tu asistente financiero",
+                    destinatario=DESTINATARIO_FIJO
+                )
+                print(f"✅ Confirmación de gasto futuro enviada (ID: {id_gasto})")
+            
             return jsonify({
                 "status": "success",
                 "mensaje": "Gasto guardado",
-                "id": id_gasto
+                "id": id_gasto,
+                "fecha": str(fecha_obj)
             })
             
     except Exception as e:
@@ -398,12 +448,12 @@ def guardar_ingreso():
 def obtener_gastos():
     conn = conectar_neon()
     if not conn:
-        return jsonify([])
+        return jsonify({"error": "Error de conexión", "gastos": []})
     
     try:
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute("""
-                SELECT id, nombre, valor, prioridad, fecha
+                SELECT id, nombre, valor, prioridad, fecha, creado_en
                 FROM gastos 
                 WHERE usuario = 'german'
                 ORDER BY fecha DESC, id DESC
@@ -417,16 +467,21 @@ def obtener_gastos():
                     "nombre": g['nombre'],
                     "valor": float(g['valor']),
                     "prioridad": g['prioridad'],
-                    "fecha": str(g['fecha'])
+                    "fecha": str(g['fecha']),
+                    "creado_en": g['creado_en'].isoformat() if g['creado_en'] else None
                 }
                 for g in gastos
             ]
             
-            return jsonify(resultado)
+            return jsonify({
+                "status": "success",
+                "count": len(resultado),
+                "gastos": resultado
+            })
             
     except Exception as e:
         print(f"❌ Error obteniendo gastos: {e}")
-        return jsonify([])
+        return jsonify({"error": str(e), "gastos": []})
     finally:
         conn.close()
 
@@ -434,12 +489,12 @@ def obtener_gastos():
 def obtener_ingresos():
     conn = conectar_neon()
     if not conn:
-        return jsonify([])
+        return jsonify({"error": "Error de conexión", "ingresos": []})
     
     try:
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute("""
-                SELECT id, monto, clases, descripcion, fecha
+                SELECT id, monto, clases, descripcion, fecha, creado_en
                 FROM ingresos 
                 WHERE usuario = 'german'
                 ORDER BY fecha DESC, id DESC
@@ -453,16 +508,21 @@ def obtener_ingresos():
                     "monto": float(i['monto']),
                     "clases": i['clases'],
                     "descripcion": i['descripcion'],
-                    "fecha": str(i['fecha'])
+                    "fecha": str(i['fecha']),
+                    "creado_en": i['creado_en'].isoformat() if i['creado_en'] else None
                 }
                 for i in ingresos
             ]
             
-            return jsonify(resultado)
+            return jsonify({
+                "status": "success",
+                "count": len(resultado),
+                "ingresos": resultado
+            })
             
     except Exception as e:
         print(f"❌ Error obteniendo ingresos: {e}")
-        return jsonify([])
+        return jsonify({"error": str(e), "ingresos": []})
     finally:
         conn.close()
 
@@ -471,6 +531,7 @@ def calcular_totales():
     conn = conectar_neon()
     if not conn:
         return jsonify({
+            "status": "error",
             "total_ingresos": 0,
             "total_gastos": 0,
             "saldo": 0
@@ -480,19 +541,24 @@ def calcular_totales():
         with conn.cursor(row_factory=dict_row) as cur:
             # Total ingresos
             cur.execute("SELECT COALESCE(SUM(monto), 0) as total FROM ingresos WHERE usuario = 'german'")
-            total_ingresos = cur.fetchone()['total']
+            total_ingresos = float(cur.fetchone()['total'])
             
             # Total gastos
             cur.execute("SELECT COALESCE(SUM(valor), 0) as total FROM gastos WHERE usuario = 'german'")
-            total_gastos = cur.fetchone()['total']
+            total_gastos = float(cur.fetchone()['total'])
             
-            saldo = float(total_ingresos) - float(total_gastos)
+            saldo = total_ingresos - total_gastos
             
             return jsonify({
                 "status": "success",
-                "total_ingresos": float(total_ingresos),
-                "total_gastos": float(total_gastos),
-                "saldo": saldo
+                "total_ingresos": total_ingresos,
+                "total_gastos": total_gastos,
+                "saldo": saldo,
+                "resumen": {
+                    "ingresos": f"${total_ingresos:,.0f}",
+                    "gastos": f"${total_gastos:,.0f}",
+                    "saldo": f"${saldo:,.0f}"
+                }
             })
             
     except Exception as e:
@@ -514,14 +580,21 @@ def eliminar_gasto(id):
     
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM gastos WHERE id = %s AND usuario = 'german' RETURNING id", (id,))
-            resultado = cur.fetchone()
+            # Primero obtener información del gasto para notificar
+            cur.execute("SELECT nombre, valor FROM gastos WHERE id = %s AND usuario = 'german'", (id,))
+            gasto = cur.fetchone()
+            
+            if not gasto:
+                return jsonify({"error": "Gasto no encontrado"}), 404
+            
+            # Eliminar el gasto
+            cur.execute("DELETE FROM gastos WHERE id = %s AND usuario = 'german'", (id,))
             conn.commit()
             
-            if resultado:
-                return jsonify({"status": "success", "mensaje": "Gasto eliminado"})
-            else:
-                return jsonify({"error": "Gasto no encontrado"}), 404
+            return jsonify({
+                "status": "success", 
+                "mensaje": f"Gasto '{gasto[0]}' (${float(gasto[1]):,.0f}) eliminado"
+            })
                 
     except Exception as e:
         print(f"❌ Error eliminando gasto: {e}")
@@ -537,18 +610,18 @@ def eliminar_todos_gastos():
     
     try:
         with conn.cursor() as cur:
-            # 1. Primero contamos cuántos hay (opcional, para el mensaje)
-            cur.execute("SELECT COUNT(*) FROM gastos WHERE usuario = 'german'")
-            total = cur.fetchone()[0]
+            # Contar antes de eliminar
+            cur.execute("SELECT COUNT(*) as count FROM gastos WHERE usuario = 'german'")
+            count_before = cur.fetchone()[0]
             
-            # 2. Borramos sin el RETURNING COUNT(*) que causaba el error
+            # Eliminar todos
             cur.execute("DELETE FROM gastos WHERE usuario = 'german'")
-            
             conn.commit()
             
             return jsonify({
                 "status": "success",
-                "mensaje": f"Se eliminaron {total} gastos correctamente"
+                "mensaje": f"Se eliminaron {count_before} gastos",
+                "eliminados": count_before
             })
                 
     except Exception as e:
@@ -558,20 +631,25 @@ def eliminar_todos_gastos():
         conn.close()
 
 # ================================================
-# ENDPOINTS DE NOTIFICACIONES (NUEVOS)
+# ENDPOINTS DE NOTIFICACIONES
 # ================================================
 
 @app.route('/enviar-recordatorio', methods=['POST'])
 def enviar_recordatorio():
     """Endpoint para enviar recordatorio manualmente"""
     try:
+        print("🔄 Ejecutando verificación manual de gastos próximos...")
         verificar_gastos_proximos_a_vencer()
         return jsonify({
             "status": "success",
-            "mensaje": "Recordatorio enviado si hay gastos próximos"
+            "mensaje": "Verificación de recordatorios ejecutada",
+            "timestamp": datetime.now().isoformat()
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "status": "error",
+            "mensaje": str(e)
+        }), 500
 
 @app.route('/enviar-email-test', methods=['GET'])
 def enviar_email_test():
@@ -583,24 +661,50 @@ def enviar_email_test():
         }), 400
     
     try:
+        test_message = """¡Hola! Este es un email de prueba de tu sistema GestionG.
+
+📋 Detalles de la configuración:
+• Remitente: {from_email}
+• Destinatario: {to_email}
+• Servidor SMTP: smtp.gmail.com:465
+• Hora del envío: {timestamp}
+
+✅ Si recibes esto, las notificaciones están configuradas correctamente.
+
+Saludos,
+Tu asistente GestionG""".format(
+            from_email=EMAIL_USER,
+            to_email=DESTINATARIO_FIJO,
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+        
         resultado = enviar_email(
             asunto="✅ Test de GestionG Notificaciones",
-            mensaje="¡Hola! Este es un email de prueba de tu sistema GestionG.\n\nSi recibes esto, las notificaciones están configuradas correctamente.\n\nSaludos,\nTu asistente GestionG"
+            mensaje=test_message,
+            destinatario=DESTINATARIO_FIJO
         )
         
         if resultado:
             return jsonify({
                 "status": "success",
-                "mensaje": "Email de prueba enviado correctamente"
+                "mensaje": "Email de prueba enviado correctamente",
+                "detalles": {
+                    "from": EMAIL_USER,
+                    "to": DESTINATARIO_FIJO,
+                    "timestamp": datetime.now().isoformat()
+                }
             })
         else:
             return jsonify({
                 "status": "error", 
-                "mensaje": "Error enviando email"
+                "mensaje": "Error enviando email. Revisa las credenciales y logs."
             }), 500
             
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "status": "error",
+            "mensaje": f"Excepción al enviar email: {str(e)}"
+        }), 500
 
 # ================================================
 # PUNTO DE ENTRADA
@@ -608,8 +712,10 @@ def enviar_email_test():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-
     print("=" * 60)
-    print(f"🚀 Servicio iniciado en puerto {port}")
+    print(f"🚀 Servicio GestionG iniciado en puerto {port}")
+    print(f"📧 Notificaciones: {'ACTIVADO' if EMAIL_USER and EMAIL_PASS else 'DESACTIVADO'}")
+    print(f"📧 Remitente: {EMAIL_USER or 'No configurado'}")
+    print(f"📧 Destino: {DESTINATARIO_FIJO}")
     print("=" * 60)
     app.run(host='0.0.0.0', port=port, debug=False)
