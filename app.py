@@ -30,6 +30,7 @@ print("=" * 60)
 
 # --- CONEXIÓN A NEON ---
 def conectar_neon():
+
     """Conexión optimizada para Neon"""
     try:
         db_host = os.environ.get("DB_HOST")
@@ -49,7 +50,8 @@ def conectar_neon():
             password=db_pass,
             port=db_port,
             sslmode="require",
-            connect_timeout=10
+            connect_timeout=10,
+            autocommit = True
         )
         
         print("✅ Conexión a Neon establecida")
@@ -350,17 +352,15 @@ def guardar_gasto():
         return jsonify({"error": "Error de conexión a Neon"}), 500
     
     try:
-        with conn.cursor() as cur:
-            # Obtener fecha (hoy si no se especifica)
-            fecha_gasto = data.get('fecha')
-            if fecha_gasto:
+        with conn:
+            with conn.cursor() as cur:
+                # Obtener fecha (hoy si no se especifica)
+                fecha_gasto = data.get('fecha')
                 try:
                     fecha_obj = datetime.strptime(fecha_gasto, '%Y-%m-%d').date()
                 except ValueError:
                     fecha_obj = datetime.now().date()
-            else:
-                fecha_obj = datetime.now().date()
-            
+
             cur.execute("""
                 INSERT INTO gastos (usuario, nombre, valor, prioridad, fecha)
                 VALUES (%s, %s, %s, %s, %s)

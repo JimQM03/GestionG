@@ -288,11 +288,41 @@ button:hover {
     word-break: break-word; /* Permite que la descripción larga baje de línea */
 }
 
-/* Colores para las etiquetas en la tabla */
-.badge.deuda { background-color: #ff4136; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
-.badge.variable { background-color: #ff851b; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
-.badge.media, .badge.fijo { background-color: #0074d9; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
+/* colores por Urgencia (Tiempo) */
+.badge.vencido {
+    background-color: gray;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+.badge.alta {
+    background-color: #dc3545;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
 
+.badge.media {
+    background-color: #ffc107;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.badge.baja {
+    background-color: #28a745;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
 /* ===============================================
     8. MODALES Y NOTIFICACIONES
    =============================================== */
