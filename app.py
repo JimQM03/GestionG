@@ -352,52 +352,53 @@ def guardar_gasto():
         return jsonify({"error": "Error de conexión a Neon"}), 500
     
     try:
+        hoy = datetime.now().date()
+        fecha_obj = hoy # Valor por defecto
+
+        # Primero procesamos la fecha
+        fecha_gasto = data.get('fecha')
+        try:
+            fecha_obj = datetime.strptime(fecha_gasto, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            fecha_obj = hoy
+
         with conn:
             with conn.cursor() as cur:
-                # Obtener fecha (hoy si no se especifica)
-                fecha_gasto = data.get('fecha')
-                try:
-                    fecha_obj = datetime.strptime(fecha_gasto, '%Y-%m-%d').date()
-                except ValueError:
-                    fecha_obj = datetime.now().date()
-
-            cur.execute("""
-                INSERT INTO gastos (usuario, nombre, valor, prioridad, fecha)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                "german",
-                data['nombre'],
-                float(data['valor']),
-                data.get('prioridad', 'Media'),
-                fecha_obj
-            ))
+                cur.execute("""
+                    INSERT INTO gastos (usuario, nombre, valor, prioridad, fecha)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (
+                    "german",
+                    data['nombre'],
+                    float(data['valor']),
+                    data.get('prioridad', 'Media'),
+                    fecha_obj
+                ))
             
-            id_gasto = cur.fetchone()[0]
-            conn.commit()
+                id_gasto = cur.fetchone()[0]
             
-            # Si es un gasto futuro y email configurado, enviar confirmación
-            hoy = datetime.now().date()
-            if fecha_obj > hoy and EMAIL_USER and EMAIL_PASS:
-                enviar_email(
-                    asunto="📅 Gasto programado registrado",
-                    mensaje=f"✅ Has registrado un gasto programado:\n\n"
-                          f"📋 Nombre: {data['nombre']}\n"
-                          f"💰 Valor: ${float(data['valor']):,.0f}\n"
-                          f"📅 Fecha de vencimiento: {fecha_obj}\n"
-                          f"⚠️ Prioridad: {data.get('prioridad', 'Media')}\n\n"
-                          f"📌 Recibirás un recordatorio 24 horas antes.\n\n"
-                          f"GestionG - Tu asistente financiero",
-                    destinatario=DESTINATARIO_FIJO
-                )
-                print(f"✅ Confirmación de gasto futuro enviada (ID: {id_gasto})")
+        # Si es un gasto futuro y email configurado, enviar confirmación
+        if fecha_obj > hoy and EMAIL_USER and EMAIL_PASS:
+            enviar_email(
+                asunto="📅 Gasto programado registrado",
+                mensaje=f"✅ Has registrado un gasto programado:\n\n"
+                      f"📋 Nombre: {data['nombre']}\n"
+                      f"💰 Valor: ${float(data['valor']):,.0f}\n"
+                      f"📅 Fecha de vencimiento: {fecha_obj}\n"
+                      f"⚠️ Prioridad: {data.get('prioridad', 'Media')}\n\n"
+                      f"📌 Recibirás un recordatorio 24 horas antes.\n\n"
+                      f"GestionG - Tu asistente financiero",
+                destinatario=DESTINATARIO_FIJO
+            )
+            print(f"✅ Confirmación de gasto futuro enviada (ID: {id_gasto})")
             
-            return jsonify({
-                "status": "success",
-                "mensaje": "Gasto guardado",
-                "id": id_gasto,
-                "fecha": str(fecha_obj)
-            })
+        return jsonify({
+            "status": "success",
+            "mensaje": "Gasto guardado",
+            "id": id_gasto,
+            "fecha": str(fecha_obj)
+        })
             
     except Exception as e:
         print(f"❌ Error guardando gasto: {e}")
@@ -417,26 +418,26 @@ def guardar_ingreso():
         return jsonify({"error": "Error de conexión a Neon"}), 500
     
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO ingresos (usuario, monto, clases, descripcion)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id
-            """, (
-                "german",
-                float(data['monto']),
-                int(data.get('clases', 0)),
-                data.get('descripcion', '')
-            ))
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO ingresos (usuario, monto, clases, descripcion)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id
+                """, (
+                    "german",
+                    float(data['monto']),
+                    int(data.get('clases', 0)),
+                    data.get('descripcion', '')
+                ))
+                
+                id_ingreso = cur.fetchone()[0]
             
-            id_ingreso = cur.fetchone()[0]
-            conn.commit()
-            
-            return jsonify({
-                "status": "success",
-                "mensaje": "Ingreso guardado",
-                "id": id_ingreso
-            })
+        return jsonify({
+            "status": "success",
+            "mensaje": "Ingreso guardado",
+            "id": id_ingreso
+        })
             
     except Exception as e:
         print(f"❌ Error guardando ingreso: {e}")
