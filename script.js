@@ -225,24 +225,106 @@ async function actualizarTotales() {
 async function actualizarGrafico() {
     console.log("📊 Actualizando gráfico de gastos...");
     
+    const ctx = document.getElementById('graficoGastos');
+    if (!ctx) {
+        console.error("❌ No se encuentra el canvas para el gráfico");
+        return;
+    }
+    
     try {
-        const res = await fetch(`${API_URL}/estadisticas-gastos`);
-        if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
+        // Usar un timeout más corto para evitar esperas eternas
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        
+        const res = await fetch(`${API_URL}/estadisticas-gastos`, {
+            signal: controller.signal,
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Verificar si fue abortado
+        if (controller.signal.aborted) {
+            throw new Error('Timeout al cargar estadísticas');
+        }
+        
+        if (!res.ok) {
+            // Si es 404, el endpoint no existe
+            if (res.status === 404) {
+                console.warn("⚠️ Endpoint /estadisticas-gastos no encontrado (404)");
+                mostrarGraficoVacio();
+                return;
+            }
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
         
         const data = await res.json();
         console.log("📈 Datos para gráfico:", data);
         
-        // Si hay datos, crear/actualizar gráfico
-        if (data.categorias && data.total > 0) {
+        // Verificar estructura de datos
+        if (data.categorias && typeof data.categorias === 'object' && data.total > 0) {
             crearGraficoDona(data);
         } else {
+            console.log("ℹ️ No hay datos suficientes para el gráfico");
             mostrarGraficoVacio();
         }
         
     } catch (e) {
         console.error("❌ Error al cargar estadísticas:", e.message);
-        mostrarGraficoVacio();
+        
+        // Mostrar error específico en el gráfico
+        const errorMessage = e.name === 'AbortError' ? 'Timeout' : e.message;
+        mostrarGraficoError(errorMessage);
     }
+}
+
+// --- FUNCIÓN PARA MOSTRAR ERROR EN EL GRÁFICO ---
+function mostrarGraficoError(mensaje) {
+    const ctx = document.getElementById('graficoGastos');
+    if (!ctx) return;
+    
+    // Destruir gráfico anterior si existe
+    if (window.graficoGastos instanceof Chart) {
+        window.graficoGastos.destroy();
+    }
+    
+    // Crear gráfico de error
+    window.graficoGastos = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Error'],
+            datasets: [{
+                data: [1],
+                backgroundColor: ['#dc3545'],
+                borderColor: ['#b02a37'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false
+                }
+            },
+            cutout: '60%'
+        }
+    });
+    
+    // Mostrar mensaje de error en el centro
+    const centerText = ctx.getContext('2d');
+    centerText.clearRect(0, 0, ctx.width, ctx.height);
+    centerText.font = '14px "Segoe UI"';
+    centerText.fillStyle = '#dc3545';
+    centerText.textAlign = 'center';
+    centerText.textBaseline = 'middle';
+    centerText.fillText('Error: ' + mensaje, ctx.width / 2, ctx.height / 2);
 }
 
 // --- FUNCIÓN PARA CREAR EL GRÁFICO DE DONA ---
