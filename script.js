@@ -76,6 +76,7 @@ window.fetch = async function(...args) {
     }
 };
 
+
 // Verificar conexión al cargar la página
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("🔍 Verificando conexión inicial...");
@@ -384,10 +385,11 @@ function crearGraficoDona(data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const label = context.label || '';
+                            const categoria = context.label.split(':')[0];
                             const value = context.raw || 0;
-                            const percentage = context.parsed || 0;
-                            return `${label.split(':')[0]}: $${value.toLocaleString('es-CO')} (${percentage.toFixed(1)}%)`;
+                            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const porcentaje = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${categoria}: $${value.toLocaleString('es-CO')} (${porcentaje}%)`;
                         }
                     },
                     backgroundColor: 'rgba(0, 31, 63, 0.9)',
@@ -472,7 +474,7 @@ function mostrarGraficoVacio() {
 async function actualizarTodo() {
     await cargarHistorial();
     await actualizarTotales();
-    await actualizarGrafico();  // <-- ¡NUEVO!
+    await actualizarGrafico();  
 }
 
 async function cargarHistorial(force = false) {
@@ -817,7 +819,8 @@ async function registrarGastoEspecial(nombre, valor, tipo, fecha) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 Aplicación iniciada. Vinculando eventos...");
     actualizarTodo();
-
+    iniciarActualizacionPeriodicaGrafico();
+    
     // 1. GUARDAR INGRESO
     document.getElementById('botonGuardar')?.addEventListener('click', async () => {
         const monto = document.getElementById('CopQuincenal')?.value;
@@ -943,8 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('deuda-largo').value = '';
             
             // Actualizar tabla
-            await cargarHistorial(true);
-            await actualizarTotales();
+            await actualizarTodo();
             
         } else {
             throw new Error(resultado.error || 'Error guardando lote');
@@ -1207,3 +1209,13 @@ function iniciarVerificacionesPeriodicas() {
 }
 
 
+// Iniciar actualización periódica del gráfico
+function iniciarActualizacionPeriodicaGrafico() {
+    // Actualizar el gráfico cada 30 segundos
+    setInterval(async () => {
+        if (backendDisponible) {
+            console.log("🔄 Actualización periódica del gráfico...");
+            await actualizarGrafico();
+        }
+    }, 30000);
+}
