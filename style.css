@@ -387,7 +387,60 @@ button:hover {
 }
 
 /* ===============================================
-    10. RESPONSIVE
+   10. GRÁFICO DE DONA
+   =============================================== */
+#contenedor-grafico {
+    background-color: white;
+    margin-bottom: 20px;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+#contenedor-grafico h3 {
+    margin-top: 0;
+    color: #001f3f;
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#graficoGastos {
+    width: 100% !important;
+    height: 300px !important;
+    max-height: 400px;
+    margin: 0 auto;
+}
+
+/* Leyenda del gráfico */
+.chart-legend {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.legend-color {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+}
+
+.legend-label {
+    color: #333;
+    font-weight: 500;
+}
+
+/* ===============================================
+    RESPONSIVE
    =============================================== */
 @media (max-width: 768px) {
     .dashboard { flex-direction: column; }

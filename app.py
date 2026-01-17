@@ -810,6 +810,88 @@ def cors_test():
         "timestamp": datetime.now().isoformat()
     }), 200
 
+@app.route('/estadisticas-gastos', methods=['GET'])
+def estadisticas_gastos():
+    """Obtiene estadísticas de gastos agrupados por categoría"""
+    conn = conectar_neon()
+    if not conn:
+        return jsonify({"error": "Error de conexión", "estadisticas": {}})
+    
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            # Obtener todos los gastos
+            cur.execute("""
+                SELECT nombre, valor, prioridad
+                FROM gastos 
+                WHERE usuario = 'german'
+                ORDER BY fecha DESC
+            """)
+            
+            gastos = cur.fetchall()
+            
+            # Inicializar categorías
+            categorias = {
+                'Especificos': 0,
+                'Variables': 0,
+                'Deudas': 0
+            }
+            
+            # Palabras clave para identificar categorías
+            keywords_especificos = ['pago', 'suscripcion', 'servicio', 'tarifa', 'cuota', 'impuesto']
+            keywords_variables = ['mercado', 'comida', 'transporte', 'entretenimiento', 'salida', 'antojos', 'compra']
+            keywords_deudas = ['deuda', 'prestamo', 'credito', 'financiacion']
+            
+            # Clasificar cada gasto
+            for gasto in gastos:
+                nombre = gasto['nombre'].lower()
+                valor = float(gasto['valor'])
+                prioridad = gasto['prioridad']
+                
+                # Si la prioridad ya indica la categoría, usarla
+                if prioridad.lower() == 'deuda':
+                    categorias['Deudas'] += valor
+                elif prioridad.lower() == 'variable':
+                    categorias['Variables'] += valor
+                else:
+                    # Clasificar por palabras clave en el nombre
+                    if any(keyword in nombre for keyword in keywords_deudas):
+                        categorias['Deudas'] += valor
+                    elif any(keyword in nombre for keyword in keywords_variables):
+                        categorias['Variables'] += valor
+                    elif any(keyword in nombre for keyword in keywords_especificos):
+                        categorias['Especificos'] += valor
+                    else:
+                        # Por defecto, usar la prioridad
+                        if prioridad.lower() == 'media' or prioridad.lower() == 'alta':
+                            categorias['Especificos'] += valor
+                        else:
+                            categorias['Variables'] += valor
+            
+            # Calcular porcentajes
+            total = sum(categorias.values())
+            porcentajes = {}
+            if total > 0:
+                for categoria, valor in categorias.items():
+                    porcentajes[categoria] = round((valor / total) * 100, 1)
+            
+            return jsonify({
+                "status": "success",
+                "categorias": categorias,
+                "porcentajes": porcentajes,
+                "total": total,
+                "detalle": {
+                    "Especificos": f"${categorias['Especificos']:,.0f}",
+                    "Variables": f"${categorias['Variables']:,.0f}",
+                    "Deudas": f"${categorias['Deudas']:,.0f}"
+                }
+            })
+            
+    except Exception as e:
+        print(f"❌ Error obteniendo estadísticas: {e}")
+        return jsonify({"error": str(e), "estadisticas": {}})
+    finally:
+        conn.close()
+        
 # ================================================
 # PUNTO DE ENTRADA (DEBE SER LO ÚLTIMO)
 # ================================================

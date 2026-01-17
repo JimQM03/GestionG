@@ -221,6 +221,177 @@ async function actualizarTotales() {
     }
 }
 
+// --- FUNCIÓN PARA ACTUALIZAR EL GRÁFICO ---
+async function actualizarGrafico() {
+    console.log("📊 Actualizando gráfico de gastos...");
+    
+    try {
+        const res = await fetch(`${API_URL}/estadisticas-gastos`);
+        if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
+        
+        const data = await res.json();
+        console.log("📈 Datos para gráfico:", data);
+        
+        // Si hay datos, crear/actualizar gráfico
+        if (data.categorias && data.total > 0) {
+            crearGraficoDona(data);
+        } else {
+            mostrarGraficoVacio();
+        }
+        
+    } catch (e) {
+        console.error("❌ Error al cargar estadísticas:", e.message);
+        mostrarGraficoVacio();
+    }
+}
+
+// --- FUNCIÓN PARA CREAR EL GRÁFICO DE DONA ---
+function crearGraficoDona(data) {
+    const ctx = document.getElementById('graficoGastos');
+    if (!ctx) {
+        console.error("❌ No se encuentra el canvas para el gráfico");
+        return;
+    }
+    
+    // Destruir gráfico anterior si existe
+    if (window.graficoGastos instanceof Chart) {
+        window.graficoGastos.destroy();
+    }
+    
+    // Preparar datos
+    const categorias = Object.keys(data.categorias);
+    const valores = Object.values(data.categorias);
+    const porcentajes = Object.values(data.porcentajes);
+    
+    // Colores para cada categoría
+    const colores = {
+        'Especificos': '#FF6384',  // Rojo
+        'Variables': '#36A2EB',    // Azul
+        'Deudas': '#FFCE56'        // Amarillo
+    };
+    
+    // Crear el gráfico
+    window.graficoGastos = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: categorias.map((cat, i) => `${cat}: ${porcentajes[i]}%`),
+            datasets: [{
+                data: valores,
+                backgroundColor: categorias.map(cat => colores[cat]),
+                borderColor: categorias.map(cat => colores[cat] + 'CC'),
+                borderWidth: 2,
+                hoverOffset: 15
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        font: {
+                            size: 12,
+                            family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const percentage = context.parsed || 0;
+                            return `${label.split(':')[0]}: $${value.toLocaleString('es-CO')} (${percentage.toFixed(1)}%)`;
+                        }
+                    },
+                    backgroundColor: 'rgba(0, 31, 63, 0.9)',
+                    titleFont: { size: 14 },
+                    bodyFont: { size: 13 },
+                    padding: 12
+                },
+                title: {
+                    display: true,
+                    text: `Total Gastos: $${data.total.toLocaleString('es-CO')}`,
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    },
+                    color: '#001f3f',
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
+                }
+            },
+            cutout: '60%',
+            animation: {
+                animateScale: true,
+                animateRotate: true,
+                duration: 1000,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+    
+    console.log("✅ Gráfico creado exitosamente");
+}
+
+// --- FUNCIÓN PARA MOSTRAR GRÁFICO VACÍO ---
+function mostrarGraficoVacio() {
+    const ctx = document.getElementById('graficoGastos');
+    if (!ctx) return;
+    
+    // Destruir gráfico anterior si existe
+    if (window.graficoGastos instanceof Chart) {
+        window.graficoGastos.destroy();
+    }
+    
+    // Crear gráfico vacío
+    window.graficoGastos = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Sin datos'],
+            datasets: [{
+                data: [1],
+                backgroundColor: ['#e0e0e0'],
+                borderColor: ['#cccccc'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false
+                }
+            },
+            cutout: '60%'
+        }
+    });
+    
+    // Mostrar mensaje en el centro
+    const centerText = ctx.getContext('2d');
+    centerText.font = '14px "Segoe UI"';
+    centerText.fillStyle = '#666';
+    centerText.textAlign = 'center';
+    centerText.textBaseline = 'middle';
+    centerText.fillText('No hay datos', ctx.width / 2, ctx.height / 2);
+}
+
+// --- FUNCIÓN PARA ACTUALIZAR DESPUÉS DE GUARDAR GASTOS ---
+async function actualizarTodo() {
+    await cargarHistorial();
+    await actualizarTotales();
+    await actualizarGrafico();  // <-- ¡NUEVO!
+}
 
 async function cargarHistorial(force = false) {
     console.log("📥 ===== INICIANDO CARGA DE HISTORIAL =====");
@@ -427,8 +598,8 @@ async function eliminarGasto(id) {
             mostrarNotificacion('✅ Gasto eliminado');
             // AÑADIR PEQUEÑO DELAY Y FORZAR CARGA:
             await new Promise(r => setTimeout(r, 500));
-            await cargarHistorial(true);  // <-- CAMBIAR A true
-            await actualizarTotales();
+            await actualizarTodo();
+
         } else {
             console.error("❌ El servidor no permitió eliminar el gasto.");
         }
@@ -563,8 +734,7 @@ async function registrarGastoEspecial(nombre, valor, tipo, fecha) {
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 Aplicación iniciada. Vinculando eventos...");
-    cargarHistorial(true);
-    actualizarTotales();
+    actualizarTodo();
 
     // 1. GUARDAR INGRESO
     document.getElementById('botonGuardar')?.addEventListener('click', async () => {
@@ -727,8 +897,35 @@ async function guardarGastosIndividualmente(gastos, fecha) {
     
     if (exitosos > 0) {
         mostrarNotificacion(`✅ ${exitosos} de ${gastos.length} gastos guardados individualmente`, 'success');
-        await cargarHistorial(true);
-        await actualizarTotales();
+        await actualizarTodo();
+    }
+}
+
+async function registrarGastoEspecialSimple(nombre, valor, tipo, fecha) {
+    const fechaFinal = fecha || new Date().toISOString().split('T')[0];
+    
+    try {
+        const res = await fetch(`${API_URL}/guardar-gasto`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                nombre: nombre, 
+                valor: parseFloat(valor), 
+                fecha: fechaFinal, 
+                prioridad: tipo 
+            })
+        });
+        
+        if (res.ok) {
+            const resultado = await res.json();
+            console.log(`✅ ${nombre} guardado simple:`, resultado);
+            return resultado;
+        } else {
+            throw new Error('Error del servidor');
+        }
+    } catch (e) {
+        console.error(`❌ ${nombre} falló simple:`, e.message);
+        throw e;
     }
 }
 
@@ -751,8 +948,7 @@ async function guardarGastosIndividualmente(gastos, fecha) {
                 mostrarNotificacion('🗑️ Historial vaciado con éxito');
                 
                 // Refrescamos la interfaz para mostrar que está vacío
-                await cargarHistorial();
-                await actualizarTotales();
+                await actualizarTodo();
             } else {
                 // Si el servidor responde con 500, capturamos el mensaje de error
                 const errorData = await res.json().catch(() => ({})); 
