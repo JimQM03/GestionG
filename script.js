@@ -400,15 +400,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('botonCalcularGastos');
         const fechaUnica = document.getElementById('fecha-global-registro')?.value;
 
-        if (!fechaUnica) return mostrarNotificacion('⚠️ Selecciona una fecha', 'error');
+        if (!fechaUnica) {
+            mostrarNotificacion('⚠️ Selecciona una fecha', 'error');
+            return;
+        }
 
         // Recoger gastos
         const gastosParaGuardar = [];
         
-        // Gasto principal
+        // Gasto principal - ¡IMPORTANTE: Verificar que tenga valor!
         const descGasto = document.getElementById('desc-gasto')?.value.trim();
         const valorGasto = document.getElementById('valor-gasto-real')?.value;
-        if (descGasto && valorGasto) {
+        
+        console.log("🔍 Gasto principal:", { descGasto, valorGasto });
+        
+        if (descGasto && valorGasto && parseFloat(valorGasto) > 0) {
             gastosParaGuardar.push({ 
                 nombre: descGasto, 
                 valor: valorGasto, 
@@ -416,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Otros gastos
+        // Otros gastos con validación mejorada
         const otrosGastos = [
             { id: 'gasto-compras', nombre: 'Mercado', tipo: 'Variable' },
             { id: 'gasto-antojos', nombre: 'Antojos', tipo: 'Variable' },
@@ -425,92 +431,118 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
         
         otrosGastos.forEach(item => {
-            const valor = document.getElementById(item.id)?.value;
-            if (valor && parseFloat(valor) > 0) {
+            const input = document.getElementById(item.id);
+            const valor = input?.value;
+            
+            console.log(`🔍 ${item.nombre}:`, { valor, parsed: parseFloat(valor) });
+            
+            if (valor && !isNaN(parseFloat(valor)) && parseFloat(valor) > 0) {
                 gastosParaGuardar.push({ 
                     nombre: item.nombre, 
-                    valor: valor, 
+                    valor: parseFloat(valor), 
                     tipo: item.tipo 
                 });
             }
         });
 
+        console.log(`📋 Gastos a guardar:`, gastosParaGuardar);
+        
         if (gastosParaGuardar.length === 0) {
-            mostrarNotificacion('❌ Ingresa al menos un gasto', 'error');
+            mostrarNotificacion('❌ Ingresa al menos un gasto con valor mayor a 0', 'error');
             return;
         }
 
-        console.log(`📋 Guardando ${gastosParaGuardar.length} gastos...`);
-        
         // Deshabilitar botón
         btn.disabled = true;
+        const textoOriginal = btn.textContent;
         btn.textContent = "⌛ Guardando...";
         
         try {
             let exitosos = 0;
+            let errores = [];
             
-            // Guardar gastos secuencialmente
-            for (const gasto of gastosParaGuardar) {
+            console.log(`🔄 Guardando ${gastosParaGuardar.length} gastos...`);
+            
+            // Guardar gastos con delay entre cada uno
+            for (let i = 0; i < gastosParaGuardar.length; i++) {
+                const gasto = gastosParaGuardar[i];
+                
                 try {
-                    await registrarGastoEspecial(gasto.nombre, gasto.valor, gasto.tipo, fechaUnica);
-                    exitosos++;
-                    console.log(`✅ ${gasto.nombre} guardado`);
+                    console.log(`📤 Enviando gasto ${i+1}/${gastosParaGuardar.length}:`, gasto);
                     
-                    // Pequeña pausa
-                    await new Promise(r => setTimeout(r, 100));
+                    // Actualizar texto del botón
+                    btn.textContent = `⌛ Guardando... (${i+1}/${gastosParaGuardar.length})`;
+                    
+                    // Enviar con timeout específico
+                    const resultado = await registrarGastoEspecial(
+                        gasto.nombre, 
+                        gasto.valor, 
+                        gasto.tipo, 
+                        fechaUnica
+                    );
+                    
+                    console.log(`✅ ${gasto.nombre} guardado:`, resultado);
+                    exitosos++;
+                    
+                    // Pequeña pausa entre gastos (500ms)
+                    if (i < gastosParaGuardar.length - 1) {
+                        await new Promise(r => setTimeout(r, 500));
+                    }
+                    
                 } catch (error) {
                     console.error(`❌ ${gasto.nombre} falló:`, error);
-                    // Continuar con el siguiente
+                    errores.push(`${gasto.nombre}: ${error.message}`);
+                    
+                    // Continuar con el siguiente (no detenerse)
+                    await new Promise(r => setTimeout(r, 300));
                 }
             }
             
-            console.log(`📊 Resultado: ${exitosos} de ${gastosParaGuardar.length} exitosos`);
+            console.log(`📊 Resultado final: ${exitosos} exitosos, ${errores.length} errores`);
+            
+            if (errores.length > 0) {
+                console.log("❌ Errores detallados:", errores);
+            }
             
             if (exitosos > 0) {
-                mostrarNotificacion(`✅ ${exitosos} gastos guardados`, 'success');
+                // Limpiar formulario SOLO si se guardaron algunos
+                if (exitosos === gastosParaGuardar.length) {
+                    document.getElementById('desc-gasto').value = '';
+                    document.getElementById('valor-gasto-real').value = '';
+                    document.getElementById('gasto-compras').value = '';
+                    document.getElementById('gasto-antojos').value = '';
+                    document.getElementById('deuda-corto').value = '';
+                    document.getElementById('deuda-largo').value = '';
+                }
                 
-                // Limpiar formulario
-                document.getElementById('desc-gasto').value = '';
-                document.getElementById('valor-gasto-real').value = '';
-                document.getElementById('gasto-compras').value = '';
-                document.getElementById('gasto-antojos').value = '';
-                document.getElementById('deuda-corto').value = '';
-                document.getElementById('deuda-largo').value = '';
+                mostrarNotificacion(`✅ ${exitosos} de ${gastosParaGuardar.length} gastos guardados`, 'success');
                 
-                // === NUEVO: Forzar actualización con múltiples intentos ===
-                console.log("🔄 Programando actualización de tabla...");
+                // Actualizar tabla con retry inteligente
+                console.log("🔄 Actualizando tabla...");
                 
                 // Intento 1: Inmediato
-                setTimeout(() => {
-                    console.log("🔄 Intento 1: Actualizando tabla...");
-                    cargarHistorial(true);
-                    actualizarTotales();
-                }, 500);
+                await cargarHistorial(true);
+                await actualizarTotales();
                 
                 // Intento 2: Después de 2 segundos (por si acaso)
-                setTimeout(() => {
-                    console.log("🔄 Intento 2: Re-forzando actualización...");
-                    cargarHistorial(true);
+                setTimeout(async () => {
+                    console.log("🔄 Re-verificando tabla...");
+                    await cargarHistorial(true);
                 }, 2000);
                 
-                // Intento 3: Después de 5 segundos
-                setTimeout(() => {
-                    console.log("🔄 Intento 3: Último intento de actualización...");
-                    cargarHistorial(true);
-                }, 5000);
-                
             } else {
-                mostrarNotificacion('❌ No se guardó ningún gasto', 'error');
+                mostrarNotificacion('❌ No se guardó ningún gasto. Revisa los valores.', 'error');
             }
             
         } catch (error) {
-            console.error("❌ Error crítico:", error);
-            mostrarNotificacion('❌ Error al procesar', 'error');
+            console.error("❌ Error crítico en el proceso:", error);
+            mostrarNotificacion('❌ Error al procesar los gastos', 'error');
         } finally {
             btn.disabled = false;
-            btn.textContent = "Calcular y Registrar Gastos";
+            btn.textContent = textoOriginal;
         }
     });
+    
     // 3. BORRAR TODO EL HISTORIAL (CON MANEJO DE ERROR 500)
     document.getElementById('botonBorrarHistorial')?.addEventListener('click', async () => {
         console.log("🖱️ Intento de borrado total iniciado.");
@@ -617,60 +649,63 @@ function iniciarVerificacionesPeriodicas() {
     }
     
     intervaloVerificacion = setInterval(() => {
+        const ahora = new Date();
+        const hora = ahora.getHours();
+        const minutos = ahora.getMinutes();
+        
         // 1. Verificar si hay conexión a internet
         if (!navigator.onLine) {
-            console.log("📡 Sin conexión a internet (omitido)");
+            console.log(`📡 [${hora}:${minutos}] Sin conexión a internet (omitido)`);
             return;
         }
         
         // 2. Verificar circuit breaker
         if (!backendDisponible) {
-            console.log("🔴 Backend no disponible (circuit breaker activo)");
+            console.log(`🔴 [${hora}:${minutos}] Backend no disponible (circuit breaker activo)`);
             return;
         }
         
-        // 3. Verificar si está en horario razonable (opcional)
-        const hora = new Date().getHours();
-        if (hora < 6 || hora > 23) { // No verificar entre 11PM y 6AM
-            console.log("🌙 Horario nocturno (omitido)");
-            return;
-        }
+        // Log de hora pero SIN omitir
+        console.log(`⏰ [${hora}:${minutos}] Verificación periódica iniciada...`);
         
-        console.log("⏰ Verificación periódica iniciada...");
-        
-        // 4. Usar fetch con timeout corto para verificaciones
+        // 3. Usar fetch con timeout corto para verificaciones
         fetch(`${API_URL}/obtener-gastos`, {
-            method: 'HEAD', // Solo verificar si responde, no descargar datos
-            mode: 'no-cors', // Para evitar errores CORS en verificación
+            method: 'HEAD', // Solo verificar si responde
+            mode: 'no-cors', // Para evitar errores CORS
             signal: AbortSignal.timeout(3000) // Timeout de 3 segundos
         })
         .then(() => {
             // Si responde, cargar datos completos
-            console.log("✅ Backend responde, cargando datos...");
+            console.log(`✅ [${hora}:${minutos}] Backend responde, cargando datos...`);
             cargarHistorial(false);
         })
-        .catch(() => {
-            console.log("⚠️ Backend no responde (omitiendo carga completa)");
+        .catch((error) => {
+            console.log(`⚠️ [${hora}:${minutos}] Backend no responde: ${error.message}`);
         });
         
-    }, 30000);
+    }, 30000); // Cada 30 segundos
 }
 
 // Iniciar verificaciones cuando la página esté lista
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("🚀 Iniciando verificaciones periódicas 24/7");
     iniciarVerificacionesPeriodicas();
 });
 
 // Pausar verificaciones cuando la pestaña no esté activa
 document.addEventListener('visibilitychange', () => {
+    const ahora = new Date();
+    const hora = ahora.getHours();
+    const minutos = ahora.getMinutes();
+    
     if (document.hidden) {
         if (intervaloVerificacion) {
             clearInterval(intervaloVerificacion);
             intervaloVerificacion = null;
-            console.log("⏸️ Verificaciones pausadas (pestaña inactiva)");
+            console.log(`⏸️ [${hora}:${minutos}] Verificaciones pausadas (pestaña inactiva)`);
         }
     } else {
-        console.log("▶️ Verificaciones reanudadas");
+        console.log(`▶️ [${hora}:${minutos}] Verificaciones reanudadas`);
         iniciarVerificacionesPeriodicas();
     }
 });

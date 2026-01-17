@@ -631,6 +631,66 @@ def eliminar_todos_gastos():
     finally:
         conn.close()
 
+@app.route('/guardar-gastos-lote', methods=['POST'])
+def guardar_gastos_lote():
+    """Guardar múltiples gastos en una sola transacción"""
+    data = request.json
+    
+    if not data or 'gastos' not in data:
+        return jsonify({"error": "Datos incompletos"}), 400
+    
+    gastos = data['gastos']
+    fecha_comun = data.get('fecha', datetime.now().date().isoformat())
+    
+    if not isinstance(gastos, list):
+        return jsonify({"error": "'gastos' debe ser una lista"}), 400
+    
+    conn = conectar_neon()
+    if not conn:
+        return jsonify({"error": "Error de conexión a Neon"}), 500
+    
+    try:
+        # Convertir fecha
+        try:
+            fecha_obj = datetime.strptime(fecha_comun, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            fecha_obj = datetime.now().date()
+        
+        ids_guardados = []
+        
+        with conn:
+            with conn.cursor() as cur:
+                for gasto in gastos:
+                    if not gasto.get('nombre') or not gasto.get('valor'):
+                        continue
+                    
+                    cur.execute("""
+                        INSERT INTO gastos (usuario, nombre, valor, prioridad, fecha)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id
+                    """, (
+                        "german",
+                        gasto['nombre'],
+                        float(gasto['valor']),
+                        gasto.get('prioridad', 'Media'),
+                        fecha_obj
+                    ))
+                    
+                    id_gasto = cur.fetchone()[0]
+                    ids_guardados.append(id_gasto)
+        
+        return jsonify({
+            "status": "success",
+            "mensaje": f"Se guardaron {len(ids_guardados)} gastos",
+            "ids": ids_guardados,
+            "fecha": str(fecha_obj)
+        })
+            
+    except Exception as e:
+        print(f"❌ Error guardando gastos en lote: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
 # ================================================
 # ENDPOINTS DE NOTIFICACIONES
 # ================================================
