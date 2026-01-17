@@ -15,7 +15,31 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "cri-2026-jim")
-CORS(app, supports_credentials=True)
+cors = CORS(app, 
+    resources={
+        r"/*": {
+            "origins": [
+                "https://jimqm03.github.io",
+                "https://gestiong-backend.onrender.com",
+                "http://localhost:*",
+                "http://127.0.0.1:*"
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "Accept"],
+            "supports_credentials": True,
+            "max_age": 3600
+        }
+    }
+)
+
+# Agregar headers CORS manualmente para más seguridad
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'https://jimqm03.github.io')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Configuración de email  
 EMAIL_USER = os.environ.get("EMAIL_USER", "gestiong2026@gmail.com")
@@ -767,8 +791,27 @@ Tu asistente GestionG""".format(
             "mensaje": f"Excepción al enviar email: {str(e)}"
         }), 500
 
+
+@app.route('/cors-test', methods=['GET', 'OPTIONS'])
+def cors_test():
+    """Endpoint para probar CORS"""
+    if request.method == 'OPTIONS':
+        # Preflight request
+        response = jsonify({"status": "preflight"})
+        response.headers.add('Access-Control-Allow-Origin', 'https://jimqm03.github.io')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response, 200
+    
+    return jsonify({
+        "status": "ok",
+        "cors": "enabled",
+        "origin": request.headers.get('Origin', 'none'),
+        "timestamp": datetime.now().isoformat()
+    }), 200
+
 # ================================================
-# PUNTO DE ENTRADA
+# PUNTO DE ENTRADA (DEBE SER LO ÚLTIMO)
 # ================================================
 
 if __name__ == "__main__":

@@ -1,40 +1,131 @@
+// recuperación automática en el frontend
+let reconexionIntentos = 0;
+const MAX_RECONEXIONES = 5;
+
+async function verificarBackend() {
+    try {
+        const res = await fetch(`${API_URL}/health`, {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-cache'
+        });
+        
+        if (res.ok) {
+            console.log("✅ Backend activo");
+            reconexionIntentos = 0;
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.log("❌ Backend no responde:", error.message);
+        return false;
+    }
+}
+
+async function recuperarConexion() {
+    if (reconexionIntentos >= MAX_RECONEXIONES) {
+        console.error("🔴 Máximo de reconexiones alcanzado");
+        mostrarNotificacion('⚠️ Servicio temporalmente no disponible. Recarga la página.', 'error');
+        return false;
+    }
+    
+    reconexionIntentos++;
+    console.log(`🔄 Intento de reconexión #${reconexionIntentos}`);
+    
+    // Esperar tiempo exponencial
+    const delay = Math.min(1000 * Math.pow(2, reconexionIntentos), 30000);
+    await new Promise(r => setTimeout(r, delay));
+    
+    const activo = await verificarBackend();
+    
+    if (activo) {
+        mostrarNotificacion('✅ Conexión recuperada', 'success');
+        return true;
+    }
+    
+    return false;
+}
+
+// Interceptor para errores de red/CORS
+const fetchOriginal = window.fetch;
+window.fetch = async function(...args) {
+    let intentos = 0;
+    const maxIntentos = 2;
+    
+    while (intentos < maxIntentos) {
+        try {
+            // Usar fetchOriginal (no this.fetch)
+            return await fetchOriginal.apply(window, args);
+        } catch (error) {
+            intentos++;
+            
+            // Si es error de CORS o red y aún tenemos intentos
+            if ((error.message.includes('Failed to fetch') || 
+                 error.message.includes('CORS') ||
+                 error.name === 'TypeError') && 
+                intentos < maxIntentos) {
+                
+                console.log(`🔍 Intento ${intentos}/${maxIntentos} falló, reintentando...`);
+                await new Promise(r => setTimeout(r, 1000 * intentos)); // Backoff exponencial
+                continue;
+            }
+            
+            // Si no hay más intentos o no es error de red
+            throw error;
+        }
+    }
+};
+
+// Verificar conexión al cargar la página
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log("🔍 Verificando conexión inicial...");
+    const activo = await verificarBackend();
+    
+    if (!activo) {
+        console.log("⚠️ Backend no disponible al inicio");
+        mostrarNotificacion('⏳ Conectando con el servidor...', 'info');
+        
+        // Intentar reconexión automática
+        setTimeout(async () => {
+            await recuperarConexion();
+        }, 2000);
+    }
+});
+
 // ================================================
-// SCRIPT.JS (CON LOGS DE CONSOLA Y LIMPIEZA)
+// SCRIPT.JS - VERSIÓN CORREGIDA
 // ================================================
 
-const API_URL = "https://gestiong-backend.onrender.com";
+// --- CONFIGURACIÓN DE API ---
+function crearAPIURL() {
+    // Si estamos en GitHub Pages, usar el backend de Render
+    if (window.location.hostname.includes('github.io')) {
+        return "https://gestiong-backend.onrender.com";
+    }
+    // Si estamos en localhost
+    else if (window.location.hostname === 'localhost' || 
+             window.location.hostname === '127.0.0.1') {
+        return "http://localhost:5000";
+    }
+    // Por defecto
+    return "https://gestiong-backend.onrender.com";
+}
 
+const API_URL = crearAPIURL();
+console.log(`🌐 Usando API: ${API_URL}`);
+
+// --- VARIABLES GLOBALES ---
 let backendDisponible = true;
 let intentosFallidos = 0;
 const MAX_INTENTOS_FALLIDOS = 3;
 
-// Función para verificar sesión (se usa en Main.html)
-function verificarSesion() {
-    const usuario = localStorage.getItem('usuario_logueado');
-    const sesionActiva = localStorage.getItem('sesion_activa');
-    
-    if (usuario !== USUARIO_VALIDO || sesionActiva !== 'true') {
-        console.log('❌ No hay sesión activa, redirigiendo...');
-        window.location.href = 'index.html';
-        return false;
-    }
-    return true;
-}
-
-// Función para cerrar sesión
-function cerrarSesion() {
-    localStorage.removeItem('usuario_logueado');
-    localStorage.removeItem('sesion_activa');
-    mostrarNotificacion('👋 Sesión cerrada', 'info');
-    setTimeout(() => {
-        window.location.href = 'index.html';
-    }, 1000);
-}
 // --- SEGURIDAD Y SESIÓN ---
 (function() {
     console.log("🛠️ Verificando sesión del usuario...");
     const usuario = localStorage.getItem('usuario_logueado');
-    if (usuario !== "german") {
+    const USUARIO_VALIDO = "german"; // Añadir esta constante
+    
+    if (usuario !== USUARIO_VALIDO) {
         console.warn("⚠️ Usuario no autorizado. Redirigiendo...");
         window.location.href = 'index.html';
     } else {
@@ -54,37 +145,37 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
 }
 
 // --- FUNCIONES DE CARGA ---
-
 async function actualizarTotales() {
     console.log("🔄 Actualizando totales desde el servidor...");
     try {
-        // AÑADIR TIMESTAMP PARA EVITAR CACHÉ:
         const res = await fetch(`${API_URL}/calcular-totales?t=${Date.now()}`);
         if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
         
         const data = await res.json();
         console.log("📊 Datos recibidos:", data);
 
+        // Actualizar displays
         const displaySueldo = document.getElementById('Mostrar-sueldo');
-        if (displaySueldo) {
-            displaySueldo.textContent = data.total_gastos.toLocaleString('es-CO');
-        }
-
-        // 2. Mostrar el Ahorro (10% de los ingresos totales)
         const displayAhorro = document.getElementById('Ahorro-quincenal');
-        if (displayAhorro) {
-            displayAhorro.textContent = (data.total_ingresos * 0.1).toLocaleString('es-CO');
-        }
-
-        // 3. Actualizar el "Total gastado" al final de la tabla
         const displayTotalHistorial = document.getElementById('total-gastado');
+        
+        if (displaySueldo) {
+            displaySueldo.textContent = data.total_gastos?.toLocaleString('es-CO') || '0';
+        }
+        
+        if (displayAhorro) {
+            const ahorro = (data.total_ingresos || 0) * 0.1;
+            displayAhorro.textContent = ahorro.toLocaleString('es-CO');
+        }
+        
         if (displayTotalHistorial) {
-            displayTotalHistorial.textContent = `$${data.total_gastos.toLocaleString('es-CO')}`;
-        } 
-    }catch (e) { 
+            displayTotalHistorial.textContent = `$${(data.total_gastos || 0).toLocaleString('es-CO')}`;
+        }
+    } catch (e) { 
         console.error("❌ Error al actualizar totales:", e.message);
     }
 }
+
 
 async function cargarHistorial(force = false) {
     console.log("📥 ===== INICIANDO CARGA DE HISTORIAL =====");
@@ -303,12 +394,18 @@ async function eliminarGasto(id) {
 
 // --- ESTA FUNCIÓN CONECTA TUS INPUTS CON LA TABLA DE GASTOS ---
 async function registrarGastoEspecial(nombre, valor, tipo, fecha) {
-    // Si la fecha viene vacía, usamos la fecha de hoy en formato YYYY-MM-DD
     const fechaFinal = fecha && fecha !== "" ? fecha : new Date().toISOString().split('T')[0];
     
-    console.log(`🚀 Enviando gasto: "${nombre}" - $${valor} - ${fechaFinal}`);
+    console.log(`🚀 Enviando gasto: "${nombre}" - $${valor} - ${tipo} - ${fechaFinal}`);
 
     try {
+        // Timeout más generoso para Render gratuito (a veces tarda en "despertar")
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            console.log(`⏰ Timeout disparado para "${nombre}"`);
+            controller.abort();
+        }, 15000); // Aumentado a 15 segundos
+
         const res = await fetch(`${API_URL}/guardar-gasto`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -317,45 +414,105 @@ async function registrarGastoEspecial(nombre, valor, tipo, fecha) {
                 valor: parseFloat(valor), 
                 fecha: fechaFinal, 
                 prioridad: tipo 
-            })
+            }),
+            signal: controller.signal,
+            // Agregar keepalive para conexiones persistentes
+            keepalive: true
         });
 
-        console.log(`📡 Status respuesta: ${res.status}`);
+        // Limpiar timeout SIEMPRE
+        clearTimeout(timeoutId);
         
-        // LEER LA RESPUESTA COMPLETA
+        console.log(`📡 Status: ${res.status} - "${nombre}"`);
+        
+        // Verificar si fue abortado
+        if (res.type === 'aborted') {
+            throw new Error('Request fue abortado por el navegador');
+        }
+        
         const responseText = await res.text();
-        console.log(`📄 Respuesta cruda: ${responseText.substring(0, 200)}...`);
+        console.log(`📄 Respuesta para "${nombre}": ${responseText.substring(0, 150)}...`);
         
         if (!res.ok) {
-            // Intentar parsear como JSON si es un error
             let errorMsg = `Error HTTP ${res.status}`;
             try {
                 const errorData = JSON.parse(responseText);
                 errorMsg = errorData.error || errorData.mensaje || errorMsg;
             } catch (e) {
-                // Si no es JSON, usar el texto
                 errorMsg = responseText || errorMsg;
             }
             throw new Error(errorMsg);
         }
         
-        // Parsear respuesta exitosa
         let resultado;
         try {
             resultado = JSON.parse(responseText);
-            console.log(`✅ Gasto registrado: ID ${resultado.id || 'N/A'}`);
+            console.log(`✅ Gasto "${nombre}" registrado: ID ${resultado.id || 'N/A'}`);
         } catch (e) {
             console.error("❌ No se pudo parsear respuesta JSON:", responseText);
             throw new Error("Respuesta inválida del servidor");
         }
         
-        return resultado; // Devolver el objeto completo
+        return resultado;
         
     } catch (e) {
         console.error(`❌ Falló registro de "${nombre}":`, e.message);
-        throw e; // IMPORTANTE: Re-lanzar el error
+        
+        // Manejar diferentes tipos de errores
+        if (e.name === 'AbortError') {
+            console.log(`⏰ "${nombre}" - Timeout, puede que Render esté en modo suspensión`);
+            
+            // Reintentar una vez con timeout más corto
+            console.log(`🔄 Reintentando "${nombre}"...`);
+            await new Promise(r => setTimeout(r, 2000));
+            
+            try {
+                // Segundo intento sin abort controller
+                const res = await fetch(`${API_URL}/guardar-gasto`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        nombre: nombre, 
+                        valor: parseFloat(valor), 
+                        fecha: fechaFinal, 
+                        prioridad: tipo 
+                    })
+                });
+                
+                if (res.ok) {
+                    const resultado = await res.json();
+                    console.log(`✅ Reintento exitoso para "${nombre}": ID ${resultado.id}`);
+                    return resultado;
+                }
+            } catch (retryError) {
+                console.error(`❌ Reintento falló para "${nombre}":`, retryError.message);
+            }
+        }
+        
+        // Si es otro tipo de error, verificar si el backend está activo
+        if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+            console.log(`🌐 Problema de red para "${nombre}", verificando backend...`);
+            
+            // Verificar si el backend responde
+            try {
+                const healthRes = await fetch(`${API_URL}/health`, { 
+                    signal: AbortSignal.timeout(5000) 
+                });
+                
+                if (healthRes.ok) {
+                    console.log(`✅ Backend responde, fue error temporal para "${nombre}"`);
+                } else {
+                    console.log(`⚠️ Backend no responde correctamente`);
+                }
+            } catch (healthError) {
+                console.log(`🔴 Backend parece caído: ${healthError.message}`);
+            }
+        }
+        
+        throw e; // Re-lanzar el error original
     }
 }
+
 
 // --- INICIALIZACIÓN DE EVENTOS ---
 
@@ -458,91 +615,78 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = "⌛ Guardando...";
         
         try {
-            let exitosos = 0;
-            let errores = [];
+        console.log(`📦 Enviando ${gastosParaGuardar.length} gastos en lote...`);
+        
+        // Usar el endpoint de lote (UNA SOLA LLAMADA)
+        const res = await fetch(`${API_URL}/guardar-gastos-lote`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                gastos: gastosParaGuardar.map(g => ({
+                    nombre: g.nombre,
+                    valor: g.valor,
+                    prioridad: g.tipo
+                })),
+                fecha: fechaUnica
+            })
+        });
+        
+        const resultado = await res.json();
+        
+        if (res.ok) {
+            console.log(`✅ Lote guardado:`, resultado);
+            mostrarNotificacion(`✅ ${resultado.mensaje}`, 'success');
             
-            console.log(`🔄 Guardando ${gastosParaGuardar.length} gastos...`);
+            // Limpiar formulario
+            document.getElementById('desc-gasto').value = '';
+            document.getElementById('valor-gasto-real').value = '';
+            document.getElementById('gasto-compras').value = '';
+            document.getElementById('gasto-antojos').value = '';
+            document.getElementById('deuda-corto').value = '';
+            document.getElementById('deuda-largo').value = '';
             
-            // Guardar gastos con delay entre cada uno
-            for (let i = 0; i < gastosParaGuardar.length; i++) {
-                const gasto = gastosParaGuardar[i];
-                
-                try {
-                    console.log(`📤 Enviando gasto ${i+1}/${gastosParaGuardar.length}:`, gasto);
-                    
-                    // Actualizar texto del botón
-                    btn.textContent = `⌛ Guardando... (${i+1}/${gastosParaGuardar.length})`;
-                    
-                    // Enviar con timeout específico
-                    const resultado = await registrarGastoEspecial(
-                        gasto.nombre, 
-                        gasto.valor, 
-                        gasto.tipo, 
-                        fechaUnica
-                    );
-                    
-                    console.log(`✅ ${gasto.nombre} guardado:`, resultado);
-                    exitosos++;
-                    
-                    // Pequeña pausa entre gastos (500ms)
-                    if (i < gastosParaGuardar.length - 1) {
-                        await new Promise(r => setTimeout(r, 500));
-                    }
-                    
-                } catch (error) {
-                    console.error(`❌ ${gasto.nombre} falló:`, error);
-                    errores.push(`${gasto.nombre}: ${error.message}`);
-                    
-                    // Continuar con el siguiente (no detenerse)
-                    await new Promise(r => setTimeout(r, 300));
-                }
-            }
+            // Actualizar tabla
+            await cargarHistorial(true);
+            await actualizarTotales();
             
-            console.log(`📊 Resultado final: ${exitosos} exitosos, ${errores.length} errores`);
-            
-            if (errores.length > 0) {
-                console.log("❌ Errores detallados:", errores);
-            }
-            
-            if (exitosos > 0) {
-                // Limpiar formulario SOLO si se guardaron algunos
-                if (exitosos === gastosParaGuardar.length) {
-                    document.getElementById('desc-gasto').value = '';
-                    document.getElementById('valor-gasto-real').value = '';
-                    document.getElementById('gasto-compras').value = '';
-                    document.getElementById('gasto-antojos').value = '';
-                    document.getElementById('deuda-corto').value = '';
-                    document.getElementById('deuda-largo').value = '';
-                }
-                
-                mostrarNotificacion(`✅ ${exitosos} de ${gastosParaGuardar.length} gastos guardados`, 'success');
-                
-                // Actualizar tabla con retry inteligente
-                console.log("🔄 Actualizando tabla...");
-                
-                // Intento 1: Inmediato
-                await cargarHistorial(true);
-                await actualizarTotales();
-                
-                // Intento 2: Después de 2 segundos (por si acaso)
-                setTimeout(async () => {
-                    console.log("🔄 Re-verificando tabla...");
-                    await cargarHistorial(true);
-                }, 2000);
-                
-            } else {
-                mostrarNotificacion('❌ No se guardó ningún gasto. Revisa los valores.', 'error');
-            }
-            
-        } catch (error) {
-            console.error("❌ Error crítico en el proceso:", error);
-            mostrarNotificacion('❌ Error al procesar los gastos', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = textoOriginal;
+        } else {
+            throw new Error(resultado.error || 'Error guardando lote');
         }
-    });
+        
+    } catch (error) {
+        console.error("❌ Error en lote:", error);
+        mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
+        
+        // Si falla el lote, intentar individualmente
+        console.log("🔄 Falló el lote, intentando gastos individualmente...");
+        await guardarGastosIndividualmente(gastosParaGuardar, fechaUnica);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+    }
+});
+
+async function guardarGastosIndividualmente(gastos, fecha) {
+    let exitosos = 0;
     
+    for (const gasto of gastos) {
+        try {
+            // Usar la versión simple sin abort controller
+            await registrarGastoEspecialSimple(gasto.nombre, gasto.valor, gasto.tipo, fecha);
+            exitosos++;
+            await new Promise(r => setTimeout(r, 500)); // Pequeña pausa
+        } catch (error) {
+            console.error(`❌ ${gasto.nombre} falló individualmente:`, error.message);
+        }
+    }
+    
+    if (exitosos > 0) {
+        mostrarNotificacion(`✅ ${exitosos} de ${gastos.length} gastos guardados individualmente`, 'success');
+        await cargarHistorial(true);
+        await actualizarTotales();
+    }
+}
+
     // 3. BORRAR TODO EL HISTORIAL (CON MANEJO DE ERROR 500)
     document.getElementById('botonBorrarHistorial')?.addEventListener('click', async () => {
         console.log("🖱️ Intento de borrado total iniciado.");
@@ -639,8 +783,11 @@ async function probarMultiplesGastos() {
     }
 }
 
-// Verificaciones por intervalos de tiempo
+
+// Verificaciones por intervalos de tiempo - VERSIÓN MEJORADA
 let intervaloVerificacion;
+let verificacionesActivas = 0;
+const MAX_VERIFICACIONES_SIMULTANEAS = 1;
 
 function iniciarVerificacionesPeriodicas() {
     // Limpiar intervalo existente
@@ -649,63 +796,91 @@ function iniciarVerificacionesPeriodicas() {
     }
     
     intervaloVerificacion = setInterval(() => {
+        // Evitar múltiples verificaciones simultáneas
+        if (verificacionesActivas >= MAX_VERIFICACIONES_SIMULTANEAS) {
+            console.log("⏸️ Ya hay una verificación en curso, omitiendo...");
+            return;
+        }
+        
         const ahora = new Date();
         const hora = ahora.getHours();
         const minutos = ahora.getMinutes();
+        const segundos = ahora.getSeconds();
         
         // 1. Verificar si hay conexión a internet
         if (!navigator.onLine) {
-            console.log(`📡 [${hora}:${minutos}] Sin conexión a internet (omitido)`);
+            console.log(`📡 [${hora}:${minutos}:${segundos}] Sin conexión a internet`);
             return;
         }
         
         // 2. Verificar circuit breaker
         if (!backendDisponible) {
-            console.log(`🔴 [${hora}:${minutos}] Backend no disponible (circuit breaker activo)`);
+            console.log(`🔴 [${hora}:${minutos}:${segundos}] Backend no disponible (circuit breaker)`);
             return;
         }
         
-        // Log de hora pero SIN omitir
-        console.log(`⏰ [${hora}:${minutos}] Verificación periódica iniciada...`);
+        // Marcar que comenzó una verificación
+        verificacionesActivas++;
         
-        // 3. Usar fetch con timeout corto para verificaciones
-        fetch(`${API_URL}/obtener-gastos`, {
-            method: 'HEAD', // Solo verificar si responde
-            mode: 'no-cors', // Para evitar errores CORS
-            signal: AbortSignal.timeout(3000) // Timeout de 3 segundos
+        console.log(`⏰ [${hora}:${minutos}:${segundos}] Iniciando verificación (#${verificacionesActivas})...`);
+        
+        // 3. Usar fetch con timeout más largo
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos
+        
+        fetch(`${API_URL}/obtener-gastos?cache=${Date.now()}`, {
+            method: 'GET',
+            signal: controller.signal
         })
-        .then(() => {
-            // Si responde, cargar datos completos
-            console.log(`✅ [${hora}:${minutos}] Backend responde, cargando datos...`);
-            cargarHistorial(false);
+        .then(response => {
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
         })
-        .catch((error) => {
-            console.log(`⚠️ [${hora}:${minutos}] Backend no responde: ${error.message}`);
+        .then(data => {
+            console.log(`✅ [${hora}:${minutos}:${segundos}] Backend responde OK, ${data.gastos?.length || 0} gastos`);
+            
+            // Actualizar datos sólo si hay cambios
+            if (data.gastos && data.gastos.length > 0) {
+                actualizarTablaConDatos(data.gastos);
+                actualizarTotales();
+            }
+        })
+        .catch(error => {
+            clearTimeout(timeoutId);
+            
+            if (error.name === 'AbortError') {
+                console.log(`⚠️ [${hora}:${minutos}:${segundos}] Timeout en verificación`);
+            } else {
+                console.log(`❌ [${hora}:${minutos}:${segundos}] Error en verificación: ${error.message}`);
+            }
+            
+            // Manejar circuit breaker
+            intentosFallidos++;
+            console.log(`⚠️ Intento fallido #${intentosFallidos}`);
+            
+            if (intentosFallidos >= MAX_INTENTOS_FALLIDOS) {
+                backendDisponible = false;
+                console.log("🔴 Circuit breaker activado por fallos consecutivos");
+                
+                // Reactivar después de 3 minutos
+                setTimeout(() => {
+                    backendDisponible = true;
+                    intentosFallidos = 0;
+                    console.log("🟢 Circuit breaker reset");
+                }, 3 * 60 * 1000);
+            }
+        })
+        .finally(() => {
+            // Marcar que terminó la verificación
+            verificacionesActivas = Math.max(0, verificacionesActivas - 1);
+            console.log(`✓ [${hora}:${minutos}:${segundos}] Verificación completada`);
         });
         
-    }, 30000); // Cada 30 segundos
+    }, 60000); // Aumentado de 30 a 60 segundos para reducir carga
 }
 
-// Iniciar verificaciones cuando la página esté lista
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 Iniciando verificaciones periódicas 24/7");
-    iniciarVerificacionesPeriodicas();
-});
 
-// Pausar verificaciones cuando la pestaña no esté activa
-document.addEventListener('visibilitychange', () => {
-    const ahora = new Date();
-    const hora = ahora.getHours();
-    const minutos = ahora.getMinutes();
-    
-    if (document.hidden) {
-        if (intervaloVerificacion) {
-            clearInterval(intervaloVerificacion);
-            intervaloVerificacion = null;
-            console.log(`⏸️ [${hora}:${minutos}] Verificaciones pausadas (pestaña inactiva)`);
-        }
-    } else {
-        console.log(`▶️ [${hora}:${minutos}] Verificaciones reanudadas`);
-        iniciarVerificacionesPeriodicas();
-    }
-});
