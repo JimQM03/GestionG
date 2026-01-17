@@ -154,23 +154,68 @@ async function actualizarTotales() {
         const data = await res.json();
         console.log("📊 Datos recibidos:", data);
 
-        // Actualizar displays
+        // --- 1. OBTENER DATOS DE INGRESOS ADICIONALES ---
+        let totalIngresos = data.total_ingresos || 0;
+        let totalClases = 0;
+        
+        try {
+            const resIngresos = await fetch(`${API_URL}/obtener-ingresos?t=${Date.now()}`);
+            if (resIngresos.ok) {
+                const ingresosData = await resIngresos.json();
+                if (ingresosData.ingresos && ingresosData.ingresos.length > 0) {
+                    // Sumar todas las clases registradas
+                    totalClases = ingresosData.ingresos.reduce((sum, ingreso) => {
+                        return sum + (ingreso.clases || 0);
+                    }, 0);
+                }
+            }
+        } catch (e) {
+            console.log("ℹ️ No se pudieron obtener detalles de ingresos:", e.message);
+        }
+
+        // --- 2. ACTUALIZAR DISPLAYS ---
         const displaySueldo = document.getElementById('Mostrar-sueldo');
         const displayAhorro = document.getElementById('Ahorro-quincenal');
+        const displayValorClase = document.getElementById('valor-clase');
         const displayTotalHistorial = document.getElementById('total-gastado');
         
+        // SUELDO: Mostrar ingresos totales (NO gastos)
         if (displaySueldo) {
-            displaySueldo.textContent = data.total_gastos?.toLocaleString('es-CO') || '0';
+            displaySueldo.textContent = totalIngresos.toLocaleString('es-CO') || '0';
         }
         
+        // AHORRO QUINCENAL: 10% de los ingresos (mostrar el 10% del ingreso quincenal)
         if (displayAhorro) {
-            const ahorro = (data.total_ingresos || 0) * 0.1;
-            displayAhorro.textContent = ahorro.toLocaleString('es-CO');
+            // Si el sueldo es mensual, dividir entre 2 para obtener quincenal
+            const sueldoQuincenal = totalIngresos / 2;
+            const ahorroQuincenal = sueldoQuincenal * 0.1; // 10% del quincenal
+            displayAhorro.textContent = ahorroQuincenal.toLocaleString('es-CO', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1
+            });
         }
         
+        // VALOR POR CLASE: Calcular solo si hay clases registradas
+        if (displayValorClase) {
+            if (totalClases > 0 && totalIngresos > 0) {
+                // Calcular valor promedio por clase (ingresos totales / total de clases)
+                const valorPorClase = totalIngresos / totalClases;
+                displayValorClase.textContent = valorPorClase.toLocaleString('es-CO', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                });
+            } else {
+                displayValorClase.textContent = '0';
+            }
+        }
+        
+        // TOTAL GASTADO (historial): Mostrar total de gastos (esto está correcto)
         if (displayTotalHistorial) {
             displayTotalHistorial.textContent = `$${(data.total_gastos || 0).toLocaleString('es-CO')}`;
         }
+        
+        console.log(`💰 Resumen actualizado: Sueldo=$${totalIngresos}, Clases=${totalClases}`);
+        
     } catch (e) { 
         console.error("❌ Error al actualizar totales:", e.message);
     }
