@@ -472,9 +472,23 @@ function mostrarGraficoVacio() {
 
 // --- FUNCIÓN PARA ACTUALIZAR DESPUÉS DE GUARDAR GASTOS ---
 async function actualizarTodo() {
-    await cargarHistorial();
-    await actualizarTotales();
-    await actualizarGrafico();  
+    console.log("🔄 Actualizando toda la interfaz...");
+    
+    try {
+        // Actualizar tabla de historial
+        await cargarHistorial(true);
+        
+        // Actualizar totales (esto incluye resumen)
+        await actualizarTotales();
+        
+        // Actualizar gráfico
+        await actualizarGrafico();
+        
+        console.log("✅ Interfaz completamente actualizada");
+    } catch (e) {
+        console.error("❌ Error en actualizarTodo:", e.message);
+        mostrarNotificacion('⚠️ Hubo un error al actualizar la interfaz', 'error');
+    }
 }
 
 async function cargarHistorial(force = false) {
@@ -1017,69 +1031,107 @@ async function registrarGastoEspecialSimple(nombre, valor, tipo, fecha) {
     document.getElementById('botonBorrarHistorial')?.addEventListener('click', async () => {
         console.log("🖱️ Intento de borrado total iniciado.");
         
-        if (!confirm('⚠️ ¿ESTÁS SEGURO? Esta acción borrará TODOS los registros permanentemente.')) return;
+        if (!confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsta acción borrará PERMANENTEMENTE:\n• Todos los gastos del historial\n• Todos los ingresos registrados\n• Los datos del resumen\n\nEsta acción NO se puede deshacer.')) return;
 
+        const btn = document.getElementById('botonBorrarHistorial');
+        const textoOriginal = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "⌛ Borrando...";
+        
         try {
-            mostrarNotificacion('⏳ Borrando historial...', 'success');
+            mostrarNotificacion('⏳ Borrando todos los datos...', 'info');
 
+            console.log("🔍 Intentando usar /eliminar-todo...");
             const res = await fetch(`${API_URL}/eliminar-todo`, { 
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' }
             });
 
-             if (res.ok) {
+            console.log(`📡 Respuesta de /eliminar-todo: ${res.status}`);
+            
+            if (res.ok) {
                 const resultado = await res.json();
                 console.log("✅ Servidor: Todo borrado.", resultado);
                 
                 mostrarNotificacion(`🗑️ Se eliminaron ${resultado.eliminados?.gastos || 0} gastos y ${resultado.eliminados?.ingresos || 0} ingresos`, 'success');
                 
-                // Refrescamos toda la interfaz
-                await actualizarTodo();
+            } else if (res.status === 404) {
+                console.log("⚠️ /eliminar-todo no encontrado, usando endpoints individuales...");
                 
-                // También limpiamos los campos de entrada de ingresos por si acaso
-                document.getElementById('CopQuincenal').value = '';
-                document.getElementById('num-clases').value = '';
-                const descIngreso = document.getElementById('desc-ingreso');
-                if (descIngreso) descIngreso.value = '';
-                
-                console.log("✅ Interfaz completamente reseteada.");
-                
-            } else {
-                // Si falla el endpoint nuevo, intentar con los endpoints antiguos
-                console.log("⚠️ Endpoint /eliminar-todo no disponible, intentando borrar por separado...");
+                // Si no existe /eliminar-todo, usar endpoints individuales
+                let eliminadosGastos = 0;
+                let eliminadosIngresos = 0;
+                let mensajes = [];
                 
                 // Borrar gastos
-                const resGastos = await fetch(`${API_URL}/eliminar-todos-gastos`, { 
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                try {
+                    const resGastos = await fetch(`${API_URL}/eliminar-todos-gastos`, { 
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (resGastos.ok) {
+                        const dataGastos = await resGastos.json();
+                        eliminadosGastos = dataGastos.eliminados || 0;
+                        mensajes.push(`${eliminadosGastos} gastos`);
+                        console.log("✅ Gastos borrados:", dataGastos);
+                    }
+                } catch (e) {
+                    console.error("❌ Error borrando gastos:", e.message);
+                }
                 
                 // Borrar ingresos  
-                const resIngresos = await fetch(`${API_URL}/eliminar-todos-ingresos`, { 
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                if (resGastos.ok || resIngresos.ok) {
-                    mostrarNotificacion('🗑️ Datos borrados (método alternativo)', 'success');
+                try {
+                    const resIngresos = await fetch(`${API_URL}/eliminar-todos-ingresos`, { 
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                     
-                    // Refrescar todo
-                    await actualizarTodo();
-                    
-                    // Limpiar campos de entrada
-                    document.getElementById('CopQuincenal').value = '';
-                    document.getElementById('num-clases').value = '';
-                    const descIngreso = document.getElementById('desc-ingreso');
-                    if (descIngreso) descIngreso.value = '';
-                    
-                } else {
-                    throw new Error('No se pudieron borrar los datos');
+                    if (resIngresos.ok) {
+                        const dataIngresos = await resIngresos.json();
+                        eliminadosIngresos = dataIngresos.eliminados || 0;
+                        mensajes.push(`${eliminadosIngresos} ingresos`);
+                        console.log("✅ Ingresos borrados:", dataIngresos);
+                    }
+                } catch (e) {
+                    console.error("❌ Error borrando ingresos:", e.message);
                 }
+                
+                if (mensajes.length > 0) {
+                    mostrarNotificacion(`🗑️ Se eliminaron: ${mensajes.join(' y ')}`, 'success');
+                } else {
+                    throw new Error('No se pudo borrar ningún dato');
+                }
+                
+            } else {
+                // Otro error HTTP
+                const errorText = await res.text();
+                console.error("❌ Error del servidor:", res.status, errorText);
+                throw new Error(`Error del servidor: ${res.status} - ${errorText.substring(0, 100)}`);
             }
-
+            
+            // Refrescamos toda la interfaz
+            await actualizarTodo();
+            
+            // También limpiamos los campos de entrada de ingresos
+            document.getElementById('CopQuincenal').value = '';
+            document.getElementById('num-clases').value = '';
+            const descIngreso = document.getElementById('desc-ingreso');
+            if (descIngreso) descIngreso.value = '';
+            
+            console.log("✅ Interfaz completamente reseteada.");
+            
         } catch (e) {
             console.error("❌ Fallo total en la operación:", e.message);
-            mostrarNotificacion('❌ Error: No se pudo borrar los datos. Intenta más tarde.', 'error');
+            mostrarNotificacion(`❌ Error: ${e.message}`, 'error');
+            
+            // Sugerir recargar la página
+            if (confirm('Hubo un error al borrar los datos. ¿Quieres recargar la página?')) {
+                location.reload();
+            }
+        } finally {
+            btn.disabled = false;
+            btn.textContent = textoOriginal;
         }
     });
 
