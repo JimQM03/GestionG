@@ -333,6 +333,8 @@ def home():
             "/calcular-totales (GET)",
             "/eliminar-gasto/<id> (DELETE)",
             "/eliminar-todos-gastos (DELETE)",
+            "/eliminar-todos-ingresos (DELETE)", 
+            "/eliminar-todo (DELETE)", 
             "/test-neon (GET)",
             "/health (GET)",
             "/keep-alive (GET)",
@@ -636,6 +638,71 @@ def eliminar_todos_gastos():
     finally:
         conn.close()
 
+@app.route('/eliminar-todos-ingresos', methods=['DELETE'])
+def eliminar_todos_ingresos():
+    """Elimina todos los ingresos del usuario"""
+    conn = conectar_neon()
+    if not conn:
+        return jsonify({"error": "Error de conexión"}), 500
+    
+    try:
+        with conn.cursor() as cur:
+            # Contar antes de eliminar
+            cur.execute("SELECT COUNT(*) as count FROM ingresos WHERE usuario = 'german'")
+            count_before = cur.fetchone()[0]
+            
+            # Eliminar todos
+            cur.execute("DELETE FROM ingresos WHERE usuario = 'german'")
+            conn.commit()
+            
+            return jsonify({
+                "status": "success",
+                "mensaje": f"Se eliminaron {count_before} ingresos",
+                "eliminados": count_before
+            })
+                
+    except Exception as e:
+        print(f"❌ Error eliminando ingresos: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/eliminar-todo', methods=['DELETE'])
+def eliminar_todo():
+    """Elimina TODOS los datos del usuario (gastos e ingresos)"""
+    conn = conectar_neon()
+    if not conn:
+        return jsonify({"error": "Error de conexión"}), 500
+    
+    try:
+        with conn.cursor() as cur:
+            # Contar antes de eliminar
+            cur.execute("SELECT COUNT(*) as count FROM gastos WHERE usuario = 'german'")
+            count_gastos = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) as count FROM ingresos WHERE usuario = 'german'")
+            count_ingresos = cur.fetchone()[0]
+            
+            # Eliminar todo
+            cur.execute("DELETE FROM gastos WHERE usuario = 'german'")
+            cur.execute("DELETE FROM ingresos WHERE usuario = 'german'")
+            conn.commit()
+            
+            return jsonify({
+                "status": "success",
+                "mensaje": f"Se eliminaron {count_gastos} gastos y {count_ingresos} ingresos",
+                "eliminados": {
+                    "gastos": count_gastos,
+                    "ingresos": count_ingresos
+                }
+            })
+                
+    except Exception as e:
+        print(f"❌ Error eliminando todo: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 @app.route('/guardar-gastos-lote', methods=['POST'])
 def guardar_gastos_lote():
     """Guardar múltiples gastos en una sola transacción"""
@@ -872,6 +939,7 @@ def estadisticas_gastos():
         return jsonify({"error": str(e), "estadisticas": {}})
     finally:
         conn.close()
+
 
 # ================================================
 # PUNTO DE ENTRADA (DEBE SER LO ÚLTIMO)

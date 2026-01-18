@@ -1022,27 +1022,64 @@ async function registrarGastoEspecialSimple(nombre, valor, tipo, fecha) {
         try {
             mostrarNotificacion('⏳ Borrando historial...', 'success');
 
-            const res = await fetch(`${API_URL}/eliminar-todos-gastos`, { 
+            const res = await fetch(`${API_URL}/eliminar-todo`, { 
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            if (res.ok) {
-                console.log("✅ Servidor: Historial vaciado.");
-                mostrarNotificacion('🗑️ Historial vaciado con éxito');
+             if (res.ok) {
+                const resultado = await res.json();
+                console.log("✅ Servidor: Todo borrado.", resultado);
                 
-                // Refrescamos la interfaz para mostrar que está vacío
+                mostrarNotificacion(`🗑️ Se eliminaron ${resultado.eliminados?.gastos || 0} gastos y ${resultado.eliminados?.ingresos || 0} ingresos`, 'success');
+                
+                // Refrescamos toda la interfaz
                 await actualizarTodo();
+                
+                // También limpiamos los campos de entrada de ingresos por si acaso
+                document.getElementById('CopQuincenal').value = '';
+                document.getElementById('num-clases').value = '';
+                const descIngreso = document.getElementById('desc-ingreso');
+                if (descIngreso) descIngreso.value = '';
+                
+                console.log("✅ Interfaz completamente reseteada.");
+                
             } else {
-                // Si el servidor responde con 500, capturamos el mensaje de error
-                const errorData = await res.json().catch(() => ({})); 
-                console.error("❌ Error del servidor (500):", errorData);
-                throw new Error(errorData.mensaje || 'Error interno del servidor al borrar');
+                // Si falla el endpoint nuevo, intentar con los endpoints antiguos
+                console.log("⚠️ Endpoint /eliminar-todo no disponible, intentando borrar por separado...");
+                
+                // Borrar gastos
+                const resGastos = await fetch(`${API_URL}/eliminar-todos-gastos`, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                // Borrar ingresos  
+                const resIngresos = await fetch(`${API_URL}/eliminar-todos-ingresos`, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (resGastos.ok || resIngresos.ok) {
+                    mostrarNotificacion('🗑️ Datos borrados (método alternativo)', 'success');
+                    
+                    // Refrescar todo
+                    await actualizarTodo();
+                    
+                    // Limpiar campos de entrada
+                    document.getElementById('CopQuincenal').value = '';
+                    document.getElementById('num-clases').value = '';
+                    const descIngreso = document.getElementById('desc-ingreso');
+                    if (descIngreso) descIngreso.value = '';
+                    
+                } else {
+                    throw new Error('No se pudieron borrar los datos');
+                }
             }
 
         } catch (e) {
             console.error("❌ Fallo total en la operación:", e.message);
-            mostrarNotificacion('❌ Error: No se pudo borrar el historial. Intenta más tarde.', 'error');
+            mostrarNotificacion('❌ Error: No se pudo borrar los datos. Intenta más tarde.', 'error');
         }
     });
 
@@ -1070,6 +1107,21 @@ async function registrarGastoEspecialSimple(nombre, valor, tipo, fecha) {
         console.log("✅ Archivo CSV generado.");
     });
 });
+
+// --- FUNCIÓN PARA CERRAR SESIÓN ---
+function cerrarSesion() {
+    console.log("🚪 Cerrando sesión...");
+    
+    if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+        // Limpiar localStorage
+        localStorage.removeItem('usuario_logueado');
+        
+        // Redirigir a la página de login
+        window.location.href = 'index.html';
+        
+        console.log("✅ Sesión cerrada correctamente");
+    }
+}
 
 // función de prueba
 async function probarMultiplesGastos() {
