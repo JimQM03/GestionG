@@ -55,66 +55,71 @@ header h1 {
 /* ===============================================
     2. ESTRUCTURA DEL DASHBOARD - 2 COLUMNAS
    =============================================== */
+
 .dashboard {
-    display: grid;
-    /* Por defecto en pantallas grandes: 2 columnas */
-    grid-template-columns: 4fr 6fr; 
-    gap: 30px;
-    padding: 20px;
-    align-items: start;
+    display: grid !important;
+    grid-template-columns: 4fr 6fr !important; /* Columna izq (40%) y der (60%) */
+    grid-template-rows: auto auto !important;
+    gap: 30px !important;
+    padding: 20px !important;
+    align-items: start !important;
 }
 
-.columna-izquierda,
-.columna-central {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    min-width: 0; 
+/* --- DISTRIBUCIÓN MANUAL POR ID (Indispensable) --- */
+
+/* COLUMNA IZQUIERDA (PC) */
+#ingresos { 
+    grid-column: 1 !important; 
+    grid-row: 1 !important; 
+}
+#historial-ingresos-section { 
+    grid-column: 1 !important; 
+    grid-row: 2 !important; 
+}
+#contenedor-grafico { 
+    grid-column: 1 !important; 
+    grid-row: 3 !important; 
 }
 
+/* COLUMNA DERECHA (PC) */
+#horario-gastos { 
+    grid-column: 2 !important; 
+    grid-row: 1 / 2 !important; 
+}
+#lista-proximos-pagos { 
+    grid-column: 2 !important; 
+    grid-row: 2 / 4 !important; /* Se estira hacia abajo */
+}
 
-/* 1. ESTILO PARA TÍTULOS PRINCIPALES 
-   (Planificador, Registro de Ingresos, Historiales, Distribución) */
-section h2, 
-section h3, 
-.header-tabla h3, 
-.header-historial h2 {
+section {
+    background-color: white !important;
+    padding: 25px !important;
+    border-radius: 15px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 1. ESTILO PARA TÍTULOS PRINCIPALES */
+section h2, section h3, .header-tabla h3, .header-historial h2 {
     color: #001f3f;
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 20px;
-    margin-top: 0;
-    text-transform: none;
-    letter-spacing: 0.5px;
-    /* Cambiamos flex por block para que el text-align funcione */
     display: block; 
     text-align: center;
     width: 100%;
 }
 
-/* 2. ESTILO PARA SUBTÍTULOS DE FORMULARIO
-   (Fecha de gastos, Fecha de ingresos, Registro de gastos interno) */
-.seccion-fecha-global h3,
-#ingresos h3,
-.seccion-gastos h3,
-label[for="fecha-ingreso"] {
-    color: #4a5568 !important; /* Gris profesional */
+/* 2. ESTILO PARA SUBTÍTULOS */
+.seccion-fecha-global h3, #ingresos h3, .seccion-gastos h3, label[for="fecha-ingreso"] {
+    color: #4a5568 !important;
     font-size: 14px !important;
     font-weight: 600 !important;
     text-transform: uppercase;
-    letter-spacing: 1px;
     margin-bottom: 10px !important;
-    border: none !important; /* Sin líneas */
 }
 
-
-section {
-    background-color: white !important;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-}
 /* ===============================================
     3. FORMULARIOS DE INGRESOS Y GASTOS
    =============================================== */
@@ -551,67 +556,25 @@ button:hover {
     11. RESPONSIVE - DISEÑO ADAPTABLE FINAL
    =============================================== */
 
-/* --- ESCRITORIO --- */
-@media (min-width: 1101px) {
-    .dashboard {
-        display: grid !important;
-        grid-template-columns: 4fr 6fr !important;
-        gap: 30px !important;
-        padding: 20px;
-    }
-    #ingresos, #historial-ingresos-section, #contenedor-grafico { grid-column: 1 !important; }
-    #horario-gastos, #lista-proximos-pagos { grid-column: 2 !important; }
-}
-
-/* --- MÓVIL Y TABLET (Corrección de alineación) --- */
 @media (max-width: 1100px) {
     .dashboard {
         display: flex !important;
         flex-direction: column !important;
         gap: 20px !important;
-        padding: 15px !important; /* Espacio uniforme en los 4 lados */
-        width: 100% !important;
-        box-sizing: border-box !important;
     }
 
     section {
+        /* IMPORTANTE: Esto limpia la posición de PC para que el móvil no se rompa */
+        grid-column: auto !important; 
+        grid-row: auto !important; 
         width: 100% !important;
-        max-width: 100% !important;
-        margin-left: 0 !important;   /* Elimina cualquier empuje a la derecha */
-        margin-right: 0 !important;
-        box-sizing: border-box !important;
-        padding: 20px !important;    /* Espacio interno para que el texto no toque los bordes */
-    }
-
-    /* Orden de elementos */
-    #ingresos { order: 1; }
-    #historial-ingresos-section { order: 2; }
-    #horario-gastos { order: 3; }
-    #lista-proximos-pagos { order: 4; }
-    #contenedor-grafico { order: 5; }
-
-    /* Ajuste de tablas */
-    .tabla-contenedor {
-        width: 100% !important;
-        overflow-x: auto !important;
         margin: 0 auto !important;
     }
-}
 
-/* Ajustes para pantallas muy angostas */
-@media (max-width: 600px) {
-    header { padding: 10px !important; }
-    .header-content h1 { font-size: 20px !important; }
-    
-    .user-info { 
-        width: 100% !important;
-        justify-content: center !important;
-        margin-top: 10px;
-    }
-
-    /* Hace que los formularios ocupen todo el ancho sin márgenes raros */
-    input, select, textarea, button {
-        width: 100% !important;
-        margin: 5px 0 !important;
-    }
+    /* Tu orden preferido en móvil */
+    #ingresos { order: 1 !important; }
+    #historial-ingresos-section { order: 2 !important; }
+    #horario-gastos { order: 3 !important; }
+    #lista-proximos-pagos { order: 4 !important; }
+    #contenedor-grafico { order: 5 !important; }
 }
