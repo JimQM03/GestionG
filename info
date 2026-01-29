@@ -10,24 +10,33 @@ Gestión de Usuario: Sistema básico de visualización de nombre de usuario y ci
 
 Diseño Visual: Paleta de colores profesional basada en azules oscuros (#001f3f) y grises técnicos.
 
+
 📑 Notas de la Beta 0.2 - Actualización de Interfaz
-Corrección de Layout Híbrido (PC/Móvil):
+1. Corrección de Layout Híbrido (PC/Móvil):
 
 Se implementó un sistema de posicionamiento explícito mediante grid-column y grid-row para la vista de escritorio. Esto soluciona el desorden visual causado al eliminar los contenedores div intermedios, permitiendo que las secciones se ubiquen correctamente en dos columnas (40/60).
 
 Optimización para Móviles: Se corrigió el error de "desplazamiento a la derecha" en dispositivos móviles mediante el uso de box-sizing: border-box y width: 100% en todas las secciones, garantizando que el contenido esté perfectamente centrado y contenido en la pantalla.
 
-Control de Flujo Visual (Responsive):
+2. Control de Flujo Visual (Responsive):
 
 Se integró la propiedad order en el bloque @media para forzar un orden lógico en móviles (Ingresos -> Gastos -> Gráfico), independientemente de su posición física en el Grid de escritorio.
 
-Refuerzo de Especificidad CSS:
+3. Refactorización Integral del Login (Novedad):
 
-Se aplicó el uso estratégico de !important en las reglas de estructura base para evitar que estilos heredados o de librerías externas interfieran con el diseño del Dashboard.
+Independencia de Estilos: Se creó el archivo login.css seccionado, eliminando la carga de estilos de acceso del archivo principal style.css para optimizar el rendimiento.
 
-Estabilidad de Títulos:
+Interfaz Ultra-Premium: Implementación de diseño Glassmorphism con efectos de desenfoque de fondo (backdrop-filter), tipografía Plus Jakarta Sans y animaciones de entrada dinámicas.
 
-Se preservó y unificó el estilo de títulos y subtítulos, asegurando que el centrado de los encabezados (section h2) sea consistente en ambas vistas.
+UX Avanzada en Inputs: Integración de iconografía de Font Awesome directamente dentro de los campos de usuario y contraseña, con estados de foco reactivos.
 
-Instrucción de Mantenimiento:
-Para futuras actualizaciones, recuerda que cualquier cambio en la estructura del Dashboard debe reflejarse tanto en la Sección 2 (PC) como en la Sección 11 (Móvil) para mantener la paridad visual.
+Persistencia de Datos: Se mantuvo el bloque informativo de credenciales de administrador (Usuario: german / Contraseña: Germancho1984) con formato original para facilitar el acceso rápido en fase de pruebas.
+
+4. Refuerzo de Especificidad y Estabilidad:
+
+Se aplicó el uso estratégico de !important en las reglas de estructura base para evitar interferencias de librerías externas.
+
+Se preservó y unificó el estilo de títulos y subtítulos, asegurando el centrado de los encabezados (section h2) en todas las vistas.
+
+⚠️ Instrucción de Mantenimiento: Para futuras actualizaciones, recuerda que cualquier cambio en la estructura del Dashboard debe reflejarse tanto en la Sección 2 (PC) como en la Sección 11 (Móvil). Para el acceso, cualquier modificación visual debe realizarse exclusivamente en el nuevo archivo login.css.
+
