@@ -21,125 +21,121 @@
     </header>
 
     <main class="dashboard">
-    <!-- ===============================================
-        COLUMNA IZQUIERDA DE INGRESOS
-        =============================================== -->
 
-    <div class="columna-izquierda">
-        <section id="ingresos">
-            <h2>Registro de Ingresos</h2>
-            <div class="formulario-ingreso">
-                <h3>Fecha del ingreso</h3>
-                <input type="date" id="fecha-ingreso">
-                <input type="number" id="monto-ingreso" placeholder="Monto en pesos">
-                <textarea id="desc-ingreso" placeholder="Descripción del ingreso" rows="2"></textarea>
-                <button id="botonGuardarIngreso">Guardar Ingreso</button>
-            </div>
-        </section>
+        <!-- ===============================================
+            COLUMNA IZQUIERDA DE INGRESOS
+            =============================================== -->
 
-        <section id="historial-ingresos-section"> 
-            <div class="header-tabla">
-                <h3>Historial de Ingresos</h3>
-                <button id="btn-exportar-ingresos" class="btn-exportar">Exportar</button>
-            </div>
-            
-            <div class="tabla-contenedor"> <table id="tabla-ingresos">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th> 
-                            <th>Descripción</th>
-                            <th>Monto</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cuerpo-tabla-ingresos"></tbody>
-                </table>
-            </div>
-
-            <div class="caja-total">
-                <strong>Total ingresos: </strong>
-                <span id="total-ingresos">$0</span>
-            </div>
-            <button id="btn-borrar-todo-ingresos" class="btn-limpiar">Borrar Historial</button>
-        </section>
-    </div>
-
-    <!-- ===============================================
-        COLUMNA CENTRAL DE GASTOS
-        =============================================== -->
-    <div class="columna-central">
-        <section id="horario-gastos">
-            <h2>Planificador de Gastos</h2>
-            <div class="seccion-fecha-global">
-                <h3>Fecha del gasto:</h3>
-                <input type="date" id="fecha-global-registro">
-            </div>
-            <div class="seccion-gastos">
-                <h3>Registro de gastos</h3>
-                <div class="formulario-gasto">
-                    <div class="lado-izquierdo-gasto">
-                        <select id="categoria-gasto">
-                            <option value="">Seleccionar categoría</option>
-                            <option value="Vivienda">🏠 Vivienda</option>
-                            <option value="Alimentacion">🍎 Alimentación</option>
-                            <option value="Transporte">🚗 Transporte</option>
-                            <option value="Servicios">⚡ Servicios</option>
-                            <option value="Educacion">📚 Educación</option>
-                            <option value="Salud">🏥 Salud</option>
-                            <option value="Entretenimiento">🎬 Entretenimiento</option>
-                            <option value="Ropa">👕 Ropa</option>
-                            <option value="Deudas">💳 Deudas</option>
-                            <option value="Ahorros">💰 Ahorros</option>
-                            <option value="Otros">📦 Otros</option>
-                        </select>
-                        <input type="number" id="valor-gasto-real" placeholder="Monto $">
-                    </div>
-                    <div class="lado-derecho-gasto">
-                         <textarea id="desc-gasto" placeholder="Descripción (Ej: Arriendo)" rows="4"></textarea>
-                    </div>
+        <div class="columna-izquierda">
+            <section id="ingresos">
+                <h2>Registro de Ingresos</h2>
+                <div class="formulario-ingreso">
+                    <h3>Fecha del ingreso</h3>
+                    <input type="date" id="fecha-ingreso">
+                    <input type="number" id="monto-ingreso" placeholder="Monto en pesos">
+                    <textarea id="desc-ingreso" placeholder="Descripción del ingreso" rows="2"></textarea>
+                    <button id="botonGuardarIngreso">Guardar Ingreso</button>
                 </div>
-                <button id="botonGuardarGasto">Guardar Gasto</button>
-            </div>               
-        </section>
+            </section>
 
-        <section id="lista-proximos-pagos">
-            <div class="header-historial">
-                <h2>Historial de Gastos</h2>
-                <button id="btn-exportar-gastos" class="btn-exportar">Exportar</button>
-            </div>
-            <div class="tabla-contenedor">
-                <table id="tabla-historial">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Descripción</th>
-                            <th>Categoría</th>
-                            <th>Costo</th>
-                            <th>Prioridad</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cuerpo-historial"></tbody>
-                </table>
+            <section id="historial-ingresos-section"> 
+                <div class="header-tabla">
+                    <h3>Historial de Ingresos</h3>
+                    <button id="btn-exportar-ingresos" class="btn-exportar">Exportar</button>
+                </div>
+                
+                <div class="tabla-contenedor"> <table id="tabla-ingresos">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th> 
+                                <th>Descripción</th>
+                                <th>Monto</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpo-tabla-ingresos"></tbody>
+                    </table>
+                </div>
+
                 <div class="caja-total">
-                    <strong>Total gastado: </strong>
-                    <span id="total-gastado">$0</span>
+                    <strong>Total ingresos: </strong>
+                    <span id="total-ingresos">$0</span>
                 </div>
-                <button id="botonBorrarHistorial" class="btn-limpiar">Borrar Historial</button>
-            </div>
-        </section>
-    </div>
+                <button id="btn-borrar-todo-ingresos" class="btn-limpiar">Borrar Historial</button>
+            </section>
 
-    <!-- ===============================================
-        COLUMNA DERECHA DE GRÁFICO
-        =============================================== -->
-    <div class="columna-derecha">
-        <section id="contenedor-grafico">
-            <h3>Distribución de Gastos</h3>
-            <canvas id="graficoGastos"></canvas>
-        </section>
-    </div>
-</main>
+            <section id="contenedor-grafico">
+                <h3>Distribución de Gastos</h3>
+                <canvas id="graficoGastos"></canvas>
+            </section>
+        </div>
+
+        <!-- ===============================================
+            COLUMNA CENTRAL DE GASTOS
+            =============================================== -->
+        <div class="columna-central">
+            <section id="horario-gastos">
+                <h2>Planificador de Gastos</h2>
+                <div class="seccion-fecha-global">
+                    <h3>Fecha del gasto:</h3>
+                    <input type="date" id="fecha-global-registro">
+                </div>
+                <div class="seccion-gastos">
+                    <h3>Registro de gastos</h3>
+                    <div class="formulario-gasto">
+                        <div class="lado-izquierdo-gasto">
+                            <select id="categoria-gasto">
+                                <option value="">Seleccionar categoría</option>
+                                <option value="Vivienda">🏠 Vivienda</option>
+                                <option value="Alimentacion">🍎 Alimentación</option>
+                                <option value="Transporte">🚗 Transporte</option>
+                                <option value="Servicios">⚡ Servicios</option>
+                                <option value="Educacion">📚 Educación</option>
+                                <option value="Salud">🏥 Salud</option>
+                                <option value="Entretenimiento">🎬 Entretenimiento</option>
+                                <option value="Ropa">👕 Ropa</option>
+                                <option value="Deudas">💳 Deudas</option>
+                                <option value="Ahorros">💰 Ahorros</option>
+                                <option value="Otros">📦 Otros</option>
+                            </select>
+                            <input type="number" id="valor-gasto-real" placeholder="Monto $">
+                        </div>
+                        <div class="lado-derecho-gasto">
+                            <textarea id="desc-gasto" placeholder="Descripción (Ej: Arriendo)" rows="4"></textarea>
+                        </div>
+                    </div>
+                    <button id="botonGuardarGasto">Guardar Gasto</button>
+                </div>               
+            </section>
+
+            <section id="lista-proximos-pagos">
+                <div class="header-historial">
+                    <h2>Historial de Gastos</h2>
+                    <button id="btn-exportar-gastos" class="btn-exportar">Exportar</button>
+                </div>
+                <div class="tabla-contenedor">
+                    <table id="tabla-historial">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                                <th>Categoría</th>
+                                <th>Costo</th>
+                                <th>Prioridad</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpo-historial"></tbody>
+                    </table>
+                </div>
+                <div class="caja-total">
+                        <strong>Total gastado: </strong>
+                        <span id="total-gastado">$0</span>
+                    </div>
+                    <button id="botonBorrarHistorial" class="btn-limpiar">Borrar Historial</button>
+            </section>
+        </div>
+    </main>
 
     <!-- Contenedor para notificaciones flotantes -->
     <div id="notificacion-container" class="notificacion-hidden"></div>

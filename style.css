@@ -53,31 +53,25 @@ header h1 {
 }
 
 /* ===============================================
-    2. ESTRUCTURA DEL DASHBOARD - 3 COLUMNAS
+    2. ESTRUCTURA DEL DASHBOARD - 2 COLUMNAS
    =============================================== */
 .dashboard {
     display: grid;
-    /* En pantallas grandes: 3 columnas */
-    grid-template-columns: minmax(320px, 2.2fr) minmax(380px, 2.5fr) minmax(200px, 1.3fr);
-    gap: 20px;
+    /* La izquierda ocupa el 40% y la central (Gastos) el 60% */
+    grid-template-columns: 4fr 6fr; 
+    gap: 30px; /* Un poco más de separación entre columnas */
     padding: 20px;
     align-items: start;
 }
 
-.columna-izquierda { grid-column: 1; }
-.columna-central { grid-column: 2; }
-.columna-derecha { grid-column: 3; }
-
 .columna-izquierda,
-.columna-central,
-.columna-derecha {
-    min-width: 0; 
-    overflow: visible; /* Asegura que el contenido se vea */
+.columna-central {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    min-width: 0; /* Evita que el contenido desborde */
+    min-width: 0; 
 }
+
 
 /* 1. ESTILO PARA TÍTULOS PRINCIPALES 
    (Planificador, Registro de Ingresos, Historiales, Distribución) */
@@ -324,144 +318,102 @@ button:hover {
     box-sizing: border-box;
 }
 
+
 /* ===============================================
     6. TABLAS DE HISTORIAL (ESTRUCTURA DE COLUMNAS)
    =============================================== */
 
-/* Contenedor con scroll para evitar que la tabla rompa el diseño */
+/* Contenedor principal de la tabla */
 .tabla-contenedor {
     width: 100%;
-    overflow: visible; /* Eliminamos el scroll lateral */
-    background-color: transparent;
+    overflow: visible; 
     background-color: white;
     border-radius: 12px;
     border: 1px solid #dee2e6;
 }
 
-/* Contenedor del Título y el Botón Exportar */
+/* Encabezados de tabla (Título + Botón Exportar alineados horizontalmente) */
 .header-tabla, 
 .header-historial {
     display: flex !important;
-    flex-direction: row !important; /* Fuerza línea horizontal */
-    justify-content: space-between !important; /* Título izquierda, Botón derecha */
+    flex-direction: row !important;
+    justify-content: space-between !important;
     align-items: center !important;
     margin-bottom: 20px;
     width: 100%;
-    border-bottom: 2px solid #e6f2ff; /* La línea decorativa va en el contenedor */
+    border-bottom: 2px solid #e6f2ff;
     padding-bottom: 10px;
 }
 
-/* Ajuste para que el título no empuje al botón */
 .header-tabla h3, 
 .header-historial h2 {
-    margin: 0 !important; /* Quita márgenes que separan */
-    border-bottom: none !important; /* Quita la línea individual para usar la del contenedor */
+    margin: 0 !important;
+    border-bottom: none !important;
     padding-bottom: 0 !important;
     font-size: 20px !important;
 }
 
-/* Forzamos que las tablas respeten los anchos definidos */
+/* Configuración General de Tablas */
 #tabla-ingresos, 
 #tabla-historial {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto !important; /* El navegador calcula el mejor ajuste */
+    table-layout: auto !important;
     background-color: white; 
 }
 
-/* Estilos de encabezados */
+/* Estilos de encabezados (Celdas oscuras superiores) */
 #tabla-ingresos th, 
 #tabla-historial th {
     background-color: #001f3f;
     color: white;
-    padding: 12px 8px;
+    padding: 12px 10px;
     text-align: left;
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-/* --- COLUMNAS TABLA INGRESOS (4 COLUMNAS) --- */
-#tabla-ingresos th:nth-child(1), #tabla-ingresos td:nth-child(1) { width: 90px; }  /* Fecha */
-#tabla-ingresos th:nth-child(2), #tabla-ingresos td:nth-child(2) { width: auto; }  /* Descripción */
-#tabla-ingresos th:nth-child(3), #tabla-ingresos td:nth-child(3) { width: 100px; } /* Monto */
-#tabla-ingresos th:nth-child(4), #tabla-ingresos td:nth-child(4) { width: 65px; text-align: center; } /* Acción */
+/* --- COLUMNAS TABLA INGRESOS (En la columna estrecha de 40%) --- */
+#tabla-ingresos th:nth-child(1), #tabla-ingresos td:nth-child(1) { width: 90px; } /* Fecha */
+#tabla-ingresos th:nth-child(2), #tabla-ingresos td:nth-child(2) { width: auto; } /* Descripción */
+#tabla-ingresos th:nth-child(3), #tabla-ingresos td:nth-child(3) { width: 120px; text-align: right; } /* Monto */
+#tabla-ingresos th:nth-child(4), #tabla-ingresos td:nth-child(4) { width: 50px; text-align: center; }  /* Acción */
 
-#tabla-historial {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: auto !important; /* Cambiamos a auto para evitar el encabalgamiento */
-}
-
-/* --- COLUMNAS TABLA GASTOS (6 COLUMNAS - CORRECCIÓN DE ALINEACIÓN) --- */
-/* Achicamos Fecha y Acción para priorizar números y descripción */
-#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 80px; }  /* Fecha */
-#tabla-historial th:nth-child(2), #tabla-historial td:nth-child(2) { width: auto; }  /* Descripción (Flexible) */
-#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 95px; }  /* Categoría */
-
-/* Ensanchamos estas dos para que los números respiren */
-#tabla-historial th:nth-child(4), #tabla-historial td:nth-child(4) { width: 100px; text-align: right; } /* Costo */
-#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 95px; }  /* Prioridad */
-
-/* Columna acción al mínimo (solo el icono) */
-#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { 
-    width: 45px; 
-    text-align: center; 
-    padding: 12px 2px; /* Menos padding lateral aquí */
-}
-
-/* 3. El truco maestro: Forzar el salto de línea y evitar el solapamiento */
-#tabla-historial td {
-    padding: 10px 8px;
-    font-size: 13px;
-    word-break: break-word;     /* Rompe palabras largas */
-    overflow-wrap: anywhere;   /* Asegura que nada se salga del contenedor */
-    white-space: normal !important; /* Permite que la celda crezca verticalmente */
-    vertical-align: middle;
-    position: relative;        /* Crea un contexto de dibujo independiente */
-    background-clip: padding-box; 
-}
-
-/* Específicamente para la descripción, para que no empuje a los demás */
-#tabla-historial td:nth-child(2) {
-    min-width: 150px; /* Asegura un mínimo para que sea legible */
-}
+/* --- COLUMNAS TABLA GASTOS (Optimizada para la columna ancha de 60%) --- */
+#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 95px; } /* Fecha */
+#tabla-historial th:nth-child(2), #tabla-historial td:nth-child(2) { width: auto; } /* Descripción */
+#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 120px; } /* Categoría */
+#tabla-historial th:nth-child(4), #tabla-historial td:nth-child(4) { width: 135px; text-align: right; } /* Costo */
+#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 100px; } /* Prioridad */
+#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { width: 50px; text-align: center; }  /* Acción */
 
 /* Estilos de las celdas de datos */
 #tabla-ingresos td, 
 #tabla-historial td {
-    padding: 12px 8px;
+    padding: 14px 10px; /* Espaciado generoso para evitar amontonamiento */
     border-bottom: 1px solid #eee;
-    font-size: 13px;
+    font-size: 14px;
     color: #333;
     line-height: 1.4;
-    word-break: break-word; /* Rompe palabras si son demasiado largas */
-    white-space: normal;    /* Permite que el texto crezca hacia abajo */
     vertical-align: middle;
-    border-bottom: 1px solid #eee;
-    word-wrap: break-word;
-    vertical-align: middle;
+    word-break: break-word;
 }
 
+/* Formato especial para Números (Monto y Costo) */
 #tabla-historial td:nth-child(4), 
 #tabla-ingresos td:nth-child(3) {
-    font-family: 'Courier New', Courier, monospace; /* Fuente monoespaciada para alinear decimales */
+    font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
-    padding-right: 15px; /* Espacio al final del número */
+    font-size: 15px;
+    padding-right: 15px;
 }
 
-/* Colores dinámicos para montos */
-#tabla-ingresos td:nth-child(3) { 
-    color: #28a745; 
-    font-weight: bold; 
-}
+/* Colores de montos */
+#tabla-ingresos td:nth-child(3) { color: #28a745; } /* Verde para ingresos */
+#tabla-historial td:nth-child(4) { color: #dc3545; } /* Rojo para gastos */
 
-#tabla-historial td:nth-child(4) { 
-    color: #dc3545; 
-    font-weight: bold; 
-}
-
-/* Efecto visual al pasar el mouse */
+/* Efecto visual al pasar el ratón */
 #tabla-ingresos tr:hover, 
 #tabla-historial tr:hover {
     background-color: #f8f9fa;
@@ -540,9 +492,12 @@ button:hover {
     9. GRÁFICO DE DONA
    =============================================== */
 #contenedor-grafico {
-    max-width: 100%;
-    position: sticky;
-    top: 20px;
+    width: 100%;
+    max-width: 100%; /* Evita que se pase a la otra columna */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 #contenedor-grafico h3 {
@@ -554,12 +509,12 @@ button:hover {
 }
 
 #graficoGastos {
-    width: 100% !important;
-    height: 300px !important;
-    max-height: 400px;
+    /* El truco es usar un ancho porcentual relativo al contenedor */
+    width: 100% !important; 
+    max-width: 320px; /* Limita el tamaño para que no sea gigante */
+    height: auto !important;
     margin: 0 auto;
 }
-
 /* ===============================================
     10. MODALES Y NOTIFICACIONES
    =============================================== */
@@ -589,53 +544,36 @@ button:hover {
     11. RESPONSIVE - EVITAR SOLAPAMIENTO
    =============================================== */
 
-@media (min-width: 1025px) and (max-width: 1366px) {
-    #tabla-historial th, #tabla-historial td {
-        font-size: 12px; /* Reducción mínima para pantallas medianas */
-    }
-}
-
-/* Tablet y Móvil (Cualquier pantalla menor a 1024px) */
-@media (max-width: 1024px) {
+/* Tablet y Pantallas Medianas (Menos de 1100px) */
+@media (max-width: 1100px) {
     .dashboard {
-        /* Convertimos el grid de 3 columnas en 1 sola fila vertical */
+        /* Pasamos de 2 columnas a 1 sola fila vertical */
         grid-template-columns: 1fr !important;
-        gap: 30px;
+        gap: 25px;
         padding: 15px;
     }
 
-    /* Liberamos las columnas de su posición fija en el grid */
-    .columna-izquierda,
-    .columna-central,
-    .columna-derecha {
-        grid-column: auto !important;
-        width: 100%;
-        max-width: 100%;
-    }
-
-    /* Reordenamos para que el flujo sea lógico en móvil:
-       1. Registro e Historial Ingresos
-       2. Registro e Historial Gastos
-       3. Gráfico de distribución */
+    /* Reordenamos para que el flujo sea lógico: 
+       1. Ingresos, 2. Gráfico, 3. Gastos */
     .columna-izquierda { order: 1; }
     .columna-central { order: 2; }
-    .columna-derecha { order: 3; }
 
-    /* Ajuste de los encabezados de tabla para que el botón no se amontone */
-    .header-tabla, .header-historial {
-        flex-direction: row; 
-        flex-wrap: wrap; /* Si el título es muy largo, el botón baja */
-        gap: 10px;
+    /* Forzamos que el gráfico no sea demasiado alto en tablets */
+    #graficoGastos {
+        max-height: 300px !important;
     }
 
-    /* Aseguramos que las tablas permitan scroll horizontal sin romper el layout */
+    /* Permitimos que las tablas tengan scroll horizontal si el contenido no cabe */
     .tabla-contenedor {
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+        border: 1px solid #dee2e6;
     }
 
-    #tabla-ingresos, #tabla-historial {
-        min-width: 500px; /* Evita que las columnas se compriman demasiado */
+    /* Definimos un ancho mínimo para que los datos no se amontonen al hacer scroll */
+    #tabla-ingresos, 
+    #tabla-historial {
+        min-width: 650px; 
     }
 }
 
@@ -644,38 +582,50 @@ button:hover {
     header {
         padding: 15px;
         height: auto;
+        min-height: 120px;
     }
 
     .header-content {
         flex-direction: column;
-        text-align: center;
-        gap: 15px;
-    }
-
-    /* Ocultamos el espacio vacío equilibrador en móvil */
-    header .header-content div:first-child {
-        display: none;
+        gap: 10px;
     }
 
     header h1 {
-        font-size: 26px;
-        order: 1;
+        font-size: 22px;
     }
 
     .user-info {
-        order: 2;
         justify-content: center;
         min-width: 100%;
-        border-top: 1px solid #4a5568;
+        border-top: 1px solid rgba(255,255,255,0.1);
         padding-top: 10px;
+        gap: 10px;
     }
 
     #nombre-usuario-display {
+        font-size: 14px;
         border-right: none;
         padding-right: 0;
     }
 
+    /* Reducimos el padding de las secciones para ganar espacio */
     section {
         padding: 15px;
+    }
+
+    /* Ajuste de formularios en móvil */
+    .formulario-gasto {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .lado-derecho-gasto textarea {
+        min-height: 100px;
+    }
+
+    /* Botones más grandes para facilitar el toque táctil */
+    button {
+        padding: 15px;
+        font-size: 14px;
     }
 }
