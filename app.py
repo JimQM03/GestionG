@@ -984,7 +984,8 @@ def estadisticas_gastos():
         return jsonify({"error": str(e), "estadisticas": {}})
     finally:
         conn.close()
-        
+
+  
 # ================================================
 # PUNTO DE ENTRADA (DEBE SER LO ÚLTIMO)
 # ================================================

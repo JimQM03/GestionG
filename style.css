@@ -317,7 +317,8 @@ button:hover {
 /* Contenedor con scroll para evitar que la tabla rompa el diseño */
 .tabla-contenedor {
     width: 100%;
-    overflow-x: auto; 
+    overflow: visible; /* Eliminamos el scroll lateral */
+    background-color: transparent;
     background-color: white;
     border-radius: 12px;
     border: 1px solid #dee2e6;
@@ -350,7 +351,8 @@ button:hover {
 #tabla-historial {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; 
+    table-layout: auto !important; /* El navegador calcula el mejor ajuste */
+    background-color: white; 
 }
 
 /* Estilos de encabezados */
@@ -371,13 +373,36 @@ button:hover {
 #tabla-ingresos th:nth-child(3), #tabla-ingresos td:nth-child(3) { width: 100px; } /* Monto */
 #tabla-ingresos th:nth-child(4), #tabla-ingresos td:nth-child(4) { width: 65px; text-align: center; } /* Acción */
 
+#tabla-historial {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto !important; /* Cambiamos a auto para evitar el encabalgamiento */
+}
+
 /* --- COLUMNAS TABLA GASTOS (6 COLUMNAS - CORRECCIÓN DE ALINEACIÓN) --- */
-#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 95px; }  /* Fecha */
-#tabla-historial th:nth-child(2), #tabla-historial td:nth-child(2) { width: auto; }  /* Descripción */
-#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 100px; } /* Categoría */
+/* Forzamos anchos mínimos en las columnas de datos cortos */
+#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 90px; }  /* Fecha */
+#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 110px; } /* Categoría */
 #tabla-historial th:nth-child(4), #tabla-historial td:nth-child(4) { width: 90px; }  /* Costo */
-#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 90px; }  /* Prioridad */
-#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { width: 65px; text-align: center; } /* Acción */
+#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 85px; }  /* Prioridad */
+#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { width: 60px; }  /* Acción */
+
+/* 3. El truco maestro: Forzar el salto de línea y evitar el solapamiento */
+#tabla-historial td {
+    padding: 10px 8px;
+    font-size: 13px;
+    word-break: break-word;     /* Rompe palabras largas */
+    overflow-wrap: anywhere;   /* Asegura que nada se salga del contenedor */
+    white-space: normal !important; /* Permite que la celda crezca verticalmente */
+    vertical-align: middle;
+    position: relative;        /* Crea un contexto de dibujo independiente */
+    background-clip: padding-box; 
+}
+
+/* Específicamente para la descripción, para que no empuje a los demás */
+#tabla-historial td:nth-child(2) {
+    min-width: 150px; /* Asegura un mínimo para que sea legible */
+}
 
 /* Estilos de las celdas de datos */
 #tabla-ingresos td, 
@@ -386,7 +411,11 @@ button:hover {
     border-bottom: 1px solid #eee;
     font-size: 13px;
     color: #333;
-    white-space: normal;
+    line-height: 1.4;
+    word-break: break-word; /* Rompe palabras si son demasiado largas */
+    white-space: normal;    /* Permite que el texto crezca hacia abajo */
+    vertical-align: middle;
+    border-bottom: 1px solid #eee;
     word-wrap: break-word;
     vertical-align: middle;
 }
@@ -529,6 +558,12 @@ button:hover {
 /* ===============================================
     11. RESPONSIVE - EVITAR SOLAPAMIENTO
    =============================================== */
+
+@media (min-width: 1025px) and (max-width: 1366px) {
+    #tabla-historial th, #tabla-historial td {
+        font-size: 12px; /* Reducción mínima para pantallas medianas */
+    }
+}
 
 /* Tablet y Móvil (Cualquier pantalla menor a 1024px) */
 @media (max-width: 1024px) {
