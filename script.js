@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ================================================
-// SCRIPT.JS - VERSIÓN CORREGIDA
+// SCRIPT.JS
 // ================================================
 
 // --- CONFIGURACIÓN DE API ---
@@ -145,6 +145,552 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
     setTimeout(() => notif.remove(), 3000);
 }
 
+// --- CONFIGURAR EVENTOS DE TECLADO ---
+function configurarEventosTeclado() {
+    // Permitir Enter en campos numéricos
+    document.getElementById('monto-ingreso').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            guardarIngreso();
+        }
+    });
+    
+    document.getElementById('valor-gasto-real').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            guardarGasto();
+        }
+    });
+    
+    // Permitir Enter en textareas con Ctrl+Enter
+    document.getElementById('desc-ingreso').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            guardarIngreso();
+        }
+    });
+    
+    document.getElementById('desc-gasto').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            guardarGasto();
+        }
+    });
+}
+
+// --- FUNCIONES DE INGRESOS ---
+
+// 1. GUARDAR INGRESO
+async function guardarIngreso() {
+    console.log("🖱️ Clic en Guardar Ingreso.");
+
+    // Validar antes de enviar
+    if (!validarFormularioIngreso()) {
+        return;
+    }
+
+    // Obtener valores del formulario
+    const fecha = document.getElementById('fecha-ingreso').value;
+    const monto = document.getElementById('monto-ingreso').value;
+    const descripcion = document.getElementById('desc-ingreso').value;
+
+    console.log("📋 Datos ingresos:", { fecha, monto, descripcion });
+
+    try {
+        const res = await fetch(`${API_URL}/guardar-ingreso`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                monto: parseFloat(monto), 
+                clases: 0,
+                descripcion: descripcion,
+                fecha: fecha // ¡IMPORTANTE! Enviar la fecha
+            })
+        });
+        
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `Error HTTP: ${res.status}`);
+        }
+        
+        const resultado = await res.json();
+        console.log("✅ Ingreso guardado con éxito:", resultado);
+        mostrarNotificacion('✅ Ingreso guardado correctamente', 'success');
+        
+        // Limpiar formulario
+        document.getElementById('fecha-ingreso').value = '';
+        document.getElementById('monto-ingreso').value = '';
+        document.getElementById('desc-ingreso').value = '';
+        
+        // Actualizar interfaz
+        await cargarIngresos();
+        await actualizarTotales();
+        await actualizarGrafico();
+        
+    } catch (error) { 
+        console.error("❌ Error al guardar ingreso:", error.message);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
+    }
+}
+
+// 2. CARGAR  Y MOSTRAR INGRESOS
+async function cargarIngresos() {
+    console.log("📥 Cargando historial de ingresos...");
+    
+    try {
+        const res = await fetch(`${API_URL}/obtener-ingresos?t=${Date.now()}`);
+        
+        if (!res.ok) {
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
+        
+        const respuestaServidor = await res.json();
+        const ingresos = Array.isArray(respuestaServidor.ingresos) ? respuestaServidor.ingresos : [];
+        
+        console.log(`🔢 ${ingresos.length} ingresos recibidos del servidor`);
+        
+        // Actualizar tabla de ingresos
+        actualizarTablaIngresos(ingresos);
+        
+    } catch (error) { 
+        console.error("❌ Error al cargar ingresos:", error.message);
+        mostrarErrorEnTablaIngresos(error.message);
+    }
+}
+
+// 3. ACTUALIZAR TABLA DE INGRESOS
+function actualizarTablaIngresos(ingresos) {
+    console.log("🔄 Actualizando tabla de ingresos...");
+    
+    const tbody = document.getElementById('cuerpo-tabla-ingresos');
+    const totalIngresos = document.getElementById('total-ingresos');
+    
+    if (!tbody) {
+        console.error("❌ No se encuentra la tabla de ingresos");
+        return;
+    }
+    
+    // Limpiar tabla
+    tbody.innerHTML = '';
+    let sumaTotal = 0;
+    
+    // Si no hay ingresos
+    if (ingresos.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="texto-centrado">
+                    📭 No hay ingresos registrados aún.
+                </td>
+            </tr>`;
+        if (totalIngresos) totalIngresos.textContent = '$0';
+        console.log("ℹ️ Tabla de ingresos vacía");
+        return;
+    }
+    
+    // Procesar cada ingreso
+    ingresos.forEach(ingreso => {
+        const monto = parseFloat(ingreso.monto) || 0;
+        sumaTotal += monto;
+        
+        const fecha = ingreso.fecha || '';
+        const descripcion = ingreso.descripcion || 'Sin descripción';
+        
+        // Crear fila
+        const fila = `
+            <tr>
+                <td>${fecha}</td>
+                <td>${descripcion}</td>
+                <td style="color:#28a745; font-weight:bold">$${monto.toLocaleString('es-CO')}</td>
+                <td>
+                    <button class="btn-eliminar" onclick="eliminarIngreso(${ingreso.id})" title="Eliminar">
+                        🗑️
+                    </button>
+                </td>
+            </tr>`;
+        tbody.innerHTML += fila;
+    });
+    
+    // Actualizar total
+    if (totalIngresos) {
+        totalIngresos.textContent = `$${sumaTotal.toLocaleString('es-CO')}`;
+        console.log(`💰 Total ingresos: $${sumaTotal.toLocaleString('es-CO')}`);
+    }
+}
+
+// 4. ELIMINAR INGRESO
+async function eliminarIngreso(id) {
+    console.log(`🗑️ Intentando eliminar ingreso con ID: ${id}`);
+    
+    if (!confirm('¿Eliminar este ingreso?')) return;
+    
+    try {
+        const res = await fetch(`${API_URL}/eliminar-ingreso/${id}`, { 
+            method: 'DELETE' 
+        });
+        
+        if (res.ok) {
+            const resultado = await res.json();
+            console.log("✅ Ingreso eliminado correctamente:", resultado);
+            mostrarNotificacion('✅ Ingreso eliminado', 'success');
+            
+            // Actualizar interfaz
+            await cargarIngresos();
+            await actualizarTotales();
+            await actualizarGrafico();
+            
+        } else {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `Error del servidor: ${res.status}`);
+        }
+    } catch (error) { 
+        console.error("❌ Error al eliminar ingreso:", error.message);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
+    }
+}
+
+// 5. BORRAR TODOS LOS INGRESOS
+async function borrarTodoIngresos() {
+    console.log("🖱️ Intento de borrado de ingresos iniciado.");
+    
+    if (!confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsta acción borrará PERMANENTEMENTE todos los ingresos registrados.\n\nEsta acción NO se puede deshacer.')) return;
+    
+    try {
+        mostrarNotificacion('⏳ Borrando todos los ingresos...', 'info');
+        
+        const res = await fetch(`${API_URL}/eliminar-todos-ingresos`, { 
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (res.ok) {
+            const resultado = await res.json();
+            console.log("✅ Ingresos borrados:", resultado);
+            mostrarNotificacion(`🗑️ Se eliminaron ${resultado.eliminados || 0} ingresos`, 'success');
+            
+            // Actualizar interfaz
+            await cargarIngresos();
+            await actualizarTotales();
+            await actualizarGrafico();
+            
+        } else {
+            throw new Error('Error del servidor');
+        }
+        
+    } catch (error) {
+        console.error("❌ Error borrando ingresos:", error.message);
+        mostrarNotificacion('Error al borrar ingresos', 'error');
+    }
+}
+
+// 6. EXPORTAR INGRESOS A CSV
+function exportarIngresosCSV() {
+    const filas = document.querySelectorAll('#cuerpo-tabla-ingresos tr');
+    
+    if (filas.length === 0 || filas[0].innerText.includes("No hay ingresos")) {
+        console.warn("⚠️ No hay datos en la tabla para exportar.");
+        return mostrarNotificacion('No hay ingresos para exportar', 'error');
+    }
+    
+    let csv = "Fecha,Descripción,Monto\n";
+    filas.forEach(fila => {
+        const celdas = fila.querySelectorAll('td');
+        if (celdas.length >= 3) {
+            const fecha = celdas[0].innerText;
+            const descripcion = celdas[1].innerText;
+            const monto = celdas[2].innerText.replace(/[^0-9]/g, '');
+            csv += `"${fecha}","${descripcion}",${monto}\n`;
+        }
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Ingresos_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    
+    console.log("✅ Archivo CSV de ingresos generado.");
+    mostrarNotificacion('✅ Ingresos exportados a CSV', 'success');
+}
+
+// --- FUNCIONES DE GASTOS ---
+async function guardarGasto() {
+    console.log("🖱️ Clic en Guardar Gasto.");
+    
+    // Validar antes de enviar
+    if (!validarFormularioGasto()) {
+        return;
+    }
+    
+    // Obtener valores del formulario
+    const fecha = document.getElementById('fecha-global-registro').value;
+    const categoria = document.getElementById('categoria-gasto').value;
+    const monto = document.getElementById('valor-gasto-real').value;
+    const descripcion = document.getElementById('desc-gasto').value;
+    
+    console.log("📋 Datos gasto:", { fecha, categoria, monto, descripcion });
+    
+    try {
+        // Determinar prioridad basada en categoría
+        let prioridad = 'Media';
+        if (categoria === 'Deudas' || categoria === 'Salud' || categoria === 'Vivienda') prioridad = 'Alta';
+        if (categoria === 'Entretenimiento' || categoria === 'Ropa' || categoria === 'Otros') prioridad = 'Baja';
+        
+        const res = await fetch(`${API_URL}/guardar-gasto`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                nombre: `${categoria}: ${descripcion}`,
+                valor: parseFloat(monto),
+                fecha: fecha,
+                prioridad: prioridad
+            })
+        });
+        
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `Error HTTP: ${res.status}`);
+        }
+        
+        const resultado = await res.json();
+        console.log("✅ Gasto guardado con éxito:", resultado);
+        mostrarNotificacion('✅ Gasto guardado correctamente', 'success');
+        
+        // Limpiar formulario (mantener categoría seleccionada)
+        document.getElementById('valor-gasto-real').value = '';
+        document.getElementById('desc-gasto').value = '';
+        
+        // Actualizar interfaz
+        await cargarGastos();
+        await actualizarTotales();
+        await actualizarGrafico();
+        
+    } catch (error) { 
+        console.error("❌ Error al guardar gasto:", error.message);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
+    }
+}
+
+// 2. CARGAR Y MOSTRAR GASTOS (REEMPLAZA a cargarHistorial)
+async function cargarGastos() {
+    console.log("📥 Cargando historial de gastos...");
+    
+    try {
+        const res = await fetch(`${API_URL}/obtener-gastos?t=${Date.now()}`);
+        
+        if (!res.ok) {
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
+        
+        const respuestaServidor = await res.json();
+        const gastos = Array.isArray(respuestaServidor.gastos) ? respuestaServidor.gastos : [];
+        
+        console.log(`🔢 ${gastos.length} gastos recibidos del servidor`);
+        
+        // Actualizar tabla de gastos
+        actualizarTablaGastos(gastos);
+        
+    } catch (error) { 
+        console.error("❌ Error al cargar gastos:", error.message);
+        mostrarErrorEnTablaGastos(error.message);
+    }
+}
+
+// 3. ACTUALIZAR TABLA DE GASTOS (REEMPLAZA a actualizarTablaConDatos)
+function actualizarTablaGastos(gastos) {
+    console.log("🔄 Actualizando tabla de gastos...");
+    
+    const tbody = document.getElementById('cuerpo-historial');
+    const totalGastado = document.getElementById('total-gastado');
+    
+    if (!tbody) {
+        console.error("❌ No se encuentra la tabla de gastos");
+        return;
+    }
+    
+    // Limpiar tabla
+    tbody.innerHTML = '';
+    let sumaTotal = 0;
+    
+    // Si no hay gastos
+    if (gastos.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="texto-centrado">
+                    📭 No hay gastos registrados aún.
+                </td>
+            </tr>`;
+        if (totalGastado) totalGastado.textContent = '$0';
+        console.log("ℹ️ Tabla de gastos vacía");
+        return;
+    }
+    
+    // Fecha de referencia para calcular prioridad
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    // Procesar cada gasto
+    gastos.forEach(gasto => {
+        const valor = parseFloat(gasto.valor) || 0;
+        sumaTotal += valor;
+        
+        // Extraer categoría y descripción del nombre
+        const nombreCompleto = gasto.nombre || '';
+        let categoria = 'Otros';
+        let descripcion = nombreCompleto;
+        
+        // Intentar extraer categoría del formato "Categoría: Descripción"
+        if (nombreCompleto.includes(':')) {
+            const partes = nombreCompleto.split(':');
+            categoria = partes[0].trim();
+            descripcion = partes.slice(1).join(':').trim();
+        }
+        
+        // Calcular prioridad dinámica
+        let textoPrioridad = "";
+        let claseCss = "";
+        
+        try {
+            const fechaGasto = new Date(gasto.fecha + 'T00:00:00');
+            if (!isNaN(fechaGasto.getTime())) {
+                const diferenciaTiempo = fechaGasto - hoy;
+                const diferenciaDias = Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24));
+                
+                if (diferenciaDias < 0) {
+                    textoPrioridad = "Vencido";
+                    claseCss = "vencido";
+                } else if (diferenciaDias <= 7) {
+                    textoPrioridad = "Alta";
+                    claseCss = "alta";
+                } else if (diferenciaDias <= 21) {
+                    textoPrioridad = "Media";
+                    claseCss = "media";
+                } else {
+                    textoPrioridad = "Baja";
+                    claseCss = "baja";
+                }
+            }
+        } catch (e) {
+            textoPrioridad = gasto.prioridad || "Media";
+            claseCss = "media";
+        }
+        
+        // Crear fila
+        const fila = `
+            <tr>
+                <td>${gasto.fecha || ''}</td>
+                <td>${descripcion}</td>
+                <td>${categoria}</td>
+                <td style="color:#dc3545; font-weight:bold">$${valor.toLocaleString('es-CO')}</td>
+                <td><span class="badge ${claseCss}">${textoPrioridad}</span></td>
+                <td>
+                    <button class="btn-eliminar" onclick="eliminarGasto(${gasto.id})" title="Eliminar">
+                        🗑️
+                    </button>
+                </td>
+            </tr>`;
+        tbody.innerHTML += fila;
+    });
+    
+    // Actualizar total
+    if (totalGastado) {
+        totalGastado.textContent = `$${sumaTotal.toLocaleString('es-CO')}`;
+        console.log(`💰 Total gastado: $${sumaTotal.toLocaleString('es-CO')}`);
+    }
+}
+
+// 4. BORRAR TODOS LOS GASTOS
+async function borrarTodoGastos() {
+    console.log("🖱️ Intento de borrado de gastos iniciado.");
+    
+    if (!confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsta acción borrará PERMANENTEMENTE todos los gastos registrados.\n\nEsta acción NO se puede deshacer.')) return;
+    
+    try {
+        mostrarNotificacion('⏳ Borrando todos los gastos...', 'info');
+        
+        const res = await fetch(`${API_URL}/eliminar-todos-gastos`, { 
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (res.ok) {
+            const resultado = await res.json();
+            console.log("✅ Gastos borrados:", resultado);
+            mostrarNotificacion(`🗑️ Se eliminaron ${resultado.eliminados || 0} gastos`, 'success');
+            
+            // Actualizar interfaz
+            await cargarGastos();
+            await actualizarTotales();
+            await actualizarGrafico();
+            
+        } else {
+            throw new Error('Error del servidor');
+        }
+        
+    } catch (error) {
+        console.error("❌ Error borrando gastos:", error.message);
+        mostrarNotificacion('Error al borrar gastos', 'error');
+    }
+}
+
+// 5. EXPORTAR GASTOS A CSV
+function exportarGastosCSV() {
+    const filas = document.querySelectorAll('#cuerpo-historial tr');
+    
+    if (filas.length === 0 || filas[0].innerText.includes("No hay gastos")) {
+        console.warn("⚠️ No hay datos en la tabla para exportar.");
+        return mostrarNotificacion('No hay gastos para exportar', 'error');
+    }
+    
+    let csv = "Fecha,Descripción,Categoría,Monto,Prioridad\n";
+    filas.forEach(fila => {
+        const celdas = fila.querySelectorAll('td');
+        if (celdas.length >= 5) {
+            const fecha = celdas[0].innerText;
+            const descripcion = celdas[1].innerText;
+            const categoria = celdas[2].innerText;
+            const monto = celdas[3].innerText.replace(/[^0-9]/g, '');
+            const prioridad = celdas[4].innerText;
+            csv += `"${fecha}","${descripcion}","${categoria}",${monto},"${prioridad}"\n`;
+        }
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Gastos_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    
+    console.log("✅ Archivo CSV de gastos generado.");
+    mostrarNotificacion('✅ Gastos exportados a CSV', 'success');
+}
+
+// 6. FUNCIONES DE ERROR PARA TABLAS (AGREGAR)
+function mostrarErrorEnTablaIngresos(mensaje) {
+    const tbody = document.getElementById('cuerpo-tabla-ingresos');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="texto-centrado" style="color:#dc3545;">
+                    ❌ Error: ${mensaje}
+                </td>
+            </tr>`;
+    }
+}
+
+function mostrarErrorEnTablaGastos(mensaje) {
+    const tbody = document.getElementById('cuerpo-historial');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="texto-centrado" style="color:#dc3545;">
+                    ❌ Error: ${mensaje}
+                </td>
+            </tr>`;
+    }
+}
+
 // --- FUNCIONES DE CARGA ---
 async function actualizarTotales() {
     console.log("🔄 Actualizando totales desde el servidor...");
@@ -154,68 +700,14 @@ async function actualizarTotales() {
         
         const data = await res.json();
         console.log("📊 Datos recibidos:", data);
-
-        // --- 1. OBTENER DATOS DE INGRESOS ADICIONALES ---
-        let totalIngresos = data.total_ingresos || 0;
-        let totalClases = 0;
         
-        try {
-            const resIngresos = await fetch(`${API_URL}/obtener-ingresos?t=${Date.now()}`);
-            if (resIngresos.ok) {
-                const ingresosData = await resIngresos.json();
-                if (ingresosData.ingresos && ingresosData.ingresos.length > 0) {
-                    // Sumar todas las clases registradas
-                    totalClases = ingresosData.ingresos.reduce((sum, ingreso) => {
-                        return sum + (ingreso.clases || 0);
-                    }, 0);
-                }
-            }
-        } catch (e) {
-            console.log("ℹ️ No se pudieron obtener detalles de ingresos:", e.message);
-        }
-
-        // --- 2. ACTUALIZAR DISPLAYS ---
-        const displaySueldo = document.getElementById('Mostrar-sueldo');
-        const displayAhorro = document.getElementById('Ahorro-quincenal');
-        const displayValorClase = document.getElementById('valor-clase');
+        // Solo actualizar total-gastado que SÍ existe
         const displayTotalHistorial = document.getElementById('total-gastado');
-        
-        // SUELDO: Mostrar ingresos totales (NO gastos)
-        if (displaySueldo) {
-            displaySueldo.textContent = totalIngresos.toLocaleString('es-CO') || '0';
-        }
-        
-        // AHORRO QUINCENAL: 10% de los ingresos (mostrar el 10% del ingreso quincenal)
-        if (displayAhorro) {
-            // Si el sueldo es mensual, dividir entre 2 para obtener quincenal
-            const sueldoQuincenal = totalIngresos / 2;
-            const ahorroQuincenal = sueldoQuincenal * 0.1; // 10% del quincenal
-            displayAhorro.textContent = ahorroQuincenal.toLocaleString('es-CO', {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1
-            });
-        }
-        
-        // VALOR POR CLASE: Calcular solo si hay clases registradas
-        if (displayValorClase) {
-            if (totalClases > 0 && totalIngresos > 0) {
-                // Calcular valor promedio por clase (ingresos totales / total de clases)
-                const valorPorClase = totalIngresos / totalClases;
-                displayValorClase.textContent = valorPorClase.toLocaleString('es-CO', {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                });
-            } else {
-                displayValorClase.textContent = '0';
-            }
-        }
-        
-        // TOTAL GASTADO (historial): Mostrar total de gastos (esto está correcto)
         if (displayTotalHistorial) {
             displayTotalHistorial.textContent = `$${(data.total_gastos || 0).toLocaleString('es-CO')}`;
         }
         
-        console.log(`💰 Resumen actualizado: Sueldo=$${totalIngresos}, Clases=${totalClases}`);
+        console.log(`💰 Total gastos: $${(data.total_gastos || 0).toLocaleString('es-CO')}`);
         
     } catch (e) { 
         console.error("❌ Error al actualizar totales:", e.message);
@@ -341,27 +833,37 @@ function crearGraficoDona(data) {
         window.graficoGastos.destroy();
     }
     
-    // Preparar datos
+    // Preparar datos para las 12 categorías
     const categorias = Object.keys(data.categorias);
     const valores = Object.values(data.categorias);
-    const porcentajes = Object.values(data.porcentajes);
     
-    // Colores para cada categoría
-    const colores = {
-        'Especificos': '#FF6384',  // Rojo
-        'Variables': '#36A2EB',    // Azul
-        'Deudas': '#FFCE56'        // Amarillo
+    // Colores para las 12 categorías del selector
+    const coloresCategorias = {
+        'Vivienda': '#FF6384',        // Rojo
+        'Alimentacion': '#36A2EB',    // Azul
+        'Transporte': '#FFCE56',      // Amarillo
+        'Servicios': '#4BC0C0',       // Turquesa
+        'Educacion': '#9966FF',       // Púrpura
+        'Salud': '#FF9F40',           // Naranja
+        'Entretenimiento': '#C9CBCF', // Gris
+        'Ropa': '#FF6384',            // Rojo claro
+        'Deudas': '#E7E9ED',          // Gris claro
+        'Ahorros': '#4BC0C0',         // Turquesa oscuro
+        'Otros': '#C9CBCF',           // Gris
+        'Especificos': '#FF6384',     // Para compatibilidad
+        'Variables': '#36A2EB',       // Para compatibilidad
+        'Deuda': '#FFCE56'            // Para compatibilidad
     };
     
-    // Crear el gráfico
+    // Crear el gráfico con todas las categorías
     window.graficoGastos = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: categorias.map((cat, i) => `${cat}: ${porcentajes[i]}%`),
+            labels: categorias.map(cat => `${cat}`),
             datasets: [{
                 data: valores,
-                backgroundColor: categorias.map(cat => colores[cat]),
-                borderColor: categorias.map(cat => colores[cat] + 'CC'),
+                backgroundColor: categorias.map(cat => coloresCategorias[cat] || '#C9CBCF'),
+                borderColor: categorias.map(cat => coloresCategorias[cat] ? coloresCategorias[cat] + 'CC' : '#CCCCCC'),
                 borderWidth: 2,
                 hoverOffset: 15
             }]
@@ -385,21 +887,17 @@ function crearGraficoDona(data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const categoria = context.label.split(':')[0];
+                            const categoria = context.label;
                             const value = context.raw || 0;
                             const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
                             const porcentaje = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                             return `${categoria}: $${value.toLocaleString('es-CO')} (${porcentaje}%)`;
                         }
-                    },
-                    backgroundColor: 'rgba(0, 31, 63, 0.9)',
-                    titleFont: { size: 14 },
-                    bodyFont: { size: 13 },
-                    padding: 12
+                    }
                 },
                 title: {
                     display: true,
-                    text: `Total Gastos: $${data.total.toLocaleString('es-CO')}`,
+                    text: `Total Gastos: $${data.total ? data.total.toLocaleString('es-CO') : '0'}`,
                     font: {
                         size: 16,
                         weight: 'bold'
@@ -421,9 +919,8 @@ function crearGraficoDona(data) {
         }
     });
     
-    console.log("✅ Gráfico creado exitosamente");
+    console.log("✅ Gráfico creado exitosamente con", categorias.length, "categorías");
 }
-
 // --- FUNCIÓN PARA MOSTRAR GRÁFICO VACÍO ---
 function mostrarGraficoVacio() {
     const ctx = document.getElementById('graficoGastos');
@@ -475,355 +972,100 @@ async function actualizarTodo() {
     console.log("🔄 Actualizando toda la interfaz...");
     
     try {
-        // Actualizar tabla de historial
-        await cargarHistorial(true);
-        
-        // Actualizar totales (esto incluye resumen)
+        await cargarIngresos();
+        await cargarGastos();
         await actualizarTotales();
-        
-        // Actualizar gráfico
         await actualizarGrafico();
         
         console.log("✅ Interfaz completamente actualizada");
-    } catch (e) {
-        console.error("❌ Error en actualizarTodo:", e.message);
+        
+    } catch (error) {
+        console.error("❌ Error en actualizarTodo:", error.message);
         mostrarNotificacion('⚠️ Hubo un error al actualizar la interfaz', 'error');
     }
 }
 
-async function cargarHistorial(force = false) {
-    console.log("📥 ===== INICIANDO CARGA DE HISTORIAL =====");
+// --- FUNCIONES DE VALIDACIÓN ---
+function validarFormularioIngreso() {
+    const fecha = document.getElementById('fecha-ingreso').value;
+    const monto = document.getElementById('monto-ingreso').value;
+    const descripcion = document.getElementById('desc-ingreso').value.trim();
     
-    // === AÑADE ESTA VERIFICACIÓN AL INICIO ===
-    if (!backendDisponible && !force) {
-        console.log("🚫 Backend temporalmente no disponible (omitido por circuit breaker)");
-        return;
+    if (!fecha) {
+        mostrarNotificacion('Selecciona una fecha para el ingreso', 'error');
+        return false;
     }
     
-    try {
-        // URL con timestamp para evitar caché
-        const url = force ? `${API_URL}/obtener-gastos?t=${Date.now()}` : `${API_URL}/obtener-gastos`;
-        console.log(`🌐 URL: ${url}`);
-        
-        const res = await fetch(url, {
-            // Añade timeout para evitar esperas eternas
-            signal: AbortSignal.timeout(10000)
-        });
-        console.log(`📡 Status: ${res.status}`);
-        
-        // Verificar respuesta HTTP
-        if (!res.ok) {
-            throw new Error(`Error ${res.status} al cargar gastos`);
-        }
-        
-        const respuestaServidor = await res.json();
-        
-        // Verificar estructura de respuesta
-        if (!respuestaServidor || typeof respuestaServidor !== 'object') {
-            throw new Error("Respuesta inválida del servidor");
-        }
-        
-        const gastos = Array.isArray(respuestaServidor.gastos) ? respuestaServidor.gastos : [];
-        console.log(`🔢 ${gastos.length} gastos recibidos del servidor`);
-        
-        // === AÑADE: Resetear circuit breaker en éxito ===
-        backendDisponible = true;
-        intentosFallidos = 0;
-        console.log("✅ Conexión exitosa, circuit breaker reset");
-        
-        // === ¡AÑADE ESTA LÍNEA CRÍTICA! ===
-        actualizarTablaConDatos(gastos);
-        // ===================================
-        
-    } catch (e) { 
-        console.error("❌ Error al cargar tabla:", e.message);
-        
-        // === AÑADE: Lógica del circuit breaker ===
-        intentosFallidos++;
-        console.log(`⚠️ Intento fallido #${intentosFallidos}`);
-        
-        if (intentosFallidos >= MAX_INTENTOS_FALLIDOS) {
-            backendDisponible = false;
-            console.log("🔴 Circuit breaker activado: Backend marcado como no disponible por 5 minutos");
-            
-            // Reactivar después de 5 minutos
-            setTimeout(() => {
-                backendDisponible = true;
-                intentosFallidos = 0;
-                console.log("🟢 Circuit breaker reset: Backend reactivado");
-            }, 5 * 60 * 1000);
-        }
-        
-        mostrarErrorEnTabla(e.message);
+    if (!monto || parseFloat(monto) <= 0) {
+        mostrarNotificacion('El monto debe ser mayor a 0', 'error');
+        return false;
     }
+    
+    if (!descripcion) {
+        mostrarNotificacion('Agrega una descripción para el ingreso', 'error');
+        return false;
+    }
+    
+    return true;
 }
 
-// Añade esto después de cargarHistorial para ver qué está pasando
-async function debugCargarHistorial() {
-    console.group("🔍 DEBUG: cargarHistorial");
+function validarFormularioGasto() {
+    const fecha = document.getElementById('fecha-global-registro').value;
+    const categoria = document.getElementById('categoria-gasto').value;
+    const monto = document.getElementById('valor-gasto-real').value;
+    const descripcion = document.getElementById('desc-gasto').value.trim();
     
-    // Verificar si backendDisponible está funcionando
-    console.log("backendDisponible:", backendDisponible);
-    console.log("intentosFallidos:", intentosFallidos);
-    
-    // Llamar a cargarHistorial con logging adicional
-    await cargarHistorial(true);
-    
-    // Verificar si la tabla tiene contenido
-    const tbody = document.getElementById('cuerpo-historial');
-    if (tbody) {
-        console.log("Filas en tabla:", tbody.children.length);
-        console.log("Contenido HTML:", tbody.innerHTML.substring(0, 200));
+    if (!fecha) {
+        mostrarNotificacion('Selecciona una fecha para el gasto', 'error');
+        return false;
     }
     
-    console.groupEnd();
-}
-// Función auxiliar para actualizar la tabla
-function actualizarTablaConDatos(gastos) {
-    console.log("🔄 Actualizando tabla con datos...");
-    
-    const tbody = document.getElementById('cuerpo-historial');
-    const displayTotal = document.getElementById('total-gastado');
-    
-    if (!tbody) {
-        console.error("❌ No se encuentra la tabla");
-        return;
+    if (!categoria || categoria === "") {
+        mostrarNotificacion('Selecciona una categoría para el gasto', 'error');
+        return false;
     }
     
-    // Limpiar tabla
-    tbody.innerHTML = '';
-    let sumaTotal = 0;
-
-    // Si no hay gastos
-    if (gastos.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="texto-centrado">
-                    📭 No hay gastos registrados aún.
-                </td>
-            </tr>`;
-        if (displayTotal) displayTotal.textContent = '$0';
-        console.log("ℹ️ Tabla vacía mostrada");
-        return;
-    }
-
-    // Fecha de referencia
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    
-    // Procesar cada gasto
-    gastos.forEach(g => {
-        const valorNumerico = Number(g.valor) || 0;
-        sumaTotal += valorNumerico;
-
-        // Calcular prioridad dinámica
-        let fechaGasto;
-        try {
-            fechaGasto = new Date(g.fecha + 'T00:00:00');
-            if (isNaN(fechaGasto.getTime())) {
-                fechaGasto = hoy;
-            }
-        } catch (e) {
-            fechaGasto = hoy;
-        }
-        
-        const diferenciaTiempo = fechaGasto - hoy;
-        const diferenciaDias = Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24));
-        
-        let textoPrioridad = "";
-        let claseCss = "";
-
-        if (diferenciaDias < 0) {
-            textoPrioridad = "Vencido";
-            claseCss = "vencido";
-        } else if (diferenciaDias <= 7) {
-            textoPrioridad = "Alta";
-            claseCss = "alta";
-        } else if (diferenciaDias <= 21) {
-            textoPrioridad = "Media";
-            claseCss = "media";
-        } else {
-            textoPrioridad = "Baja";
-            claseCss = "baja";
-        }
-        
-        // Crear fila
-        const fila = `
-            <tr>
-                <td>${g.fecha || ''}</td>
-                <td>${g.nombre || ''}</td>
-                <td style="color:#dc3545; font-weight:bold">$${valorNumerico.toLocaleString('es-CO')}</td>
-                <td><span class="badge ${claseCss}">${textoPrioridad}</span></td>
-                <td>
-                    <button class="btn-eliminar" onclick="eliminarGasto(${g.id})" title="Eliminar">
-                        🗑️
-                    </button>
-                </td>
-            </tr>`;
-        tbody.innerHTML += fila;
-    });
-
-    // Actualizar total
-    if (displayTotal) {
-        displayTotal.textContent = `$${sumaTotal.toLocaleString('es-CO')}`;
-        console.log(`💰 Total actualizado: $${sumaTotal.toLocaleString('es-CO')}`);
+    if (!monto || parseFloat(monto) <= 0) {
+        mostrarNotificacion('El monto debe ser mayor a 0', 'error');
+        return false;
     }
     
-    console.log(`✅ Tabla actualizada con ${gastos.length} gastos`);
+    if (!descripcion) {
+        mostrarNotificacion('Agrega una descripción para el gasto', 'error');
+        return false;
+    }
+    
+    return true;
 }
 
-// Función para mostrar error
-function mostrarErrorEnTabla(mensaje) {
-    const tbody = document.getElementById('cuerpo-historial');
-    if (tbody) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="texto-centrado" style="color:#dc3545;">
-                    ❌ Error: ${mensaje}
-                </td>
-            </tr>`;
-    }
-}
 // --- ACCIONES ---
 
 async function eliminarGasto(id) {
     console.log(`🗑️ Intentando eliminar gasto con ID: ${id}`);
+    
     if (!confirm('¿Eliminar este gasto?')) return;
+    
     try {
-        const res = await fetch(`${API_URL}/eliminar-gasto/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${API_URL}/eliminar-gasto/${id}`, { 
+            method: 'DELETE' 
+        });
+        
         if (res.ok) {
-            console.log("✅ Gasto eliminado correctamente.");
-            mostrarNotificacion('✅ Gasto eliminado');
-            // AÑADIR PEQUEÑO DELAY Y FORZAR CARGA:
+            const resultado = await res.json();
+            console.log("✅ Gasto eliminado correctamente:", resultado);
+            mostrarNotificacion('✅ Gasto eliminado', 'success');
+            
+            // Pequeño delay y actualizar
             await new Promise(r => setTimeout(r, 500));
             await actualizarTodo();
-
+            
         } else {
-            console.error("❌ El servidor no permitió eliminar el gasto.");
+            const errorData = await res.json();
+            throw new Error(errorData.error || `Error del servidor: ${res.status}`);
         }
-    } catch (e) { 
-        console.error("❌ Error de conexión al eliminar:", e.message); 
-    }
-}
-
-// --- ESTA FUNCIÓN CONECTA TUS INPUTS CON LA TABLA DE GASTOS ---
-async function registrarGastoEspecial(nombre, valor, tipo, fecha) {
-    const fechaFinal = fecha && fecha !== "" ? fecha : new Date().toISOString().split('T')[0];
-    
-    console.log(`🚀 Enviando gasto: "${nombre}" - $${valor} - ${tipo} - ${fechaFinal}`);
-
-    try {
-        // Timeout más generoso para Render gratuito (a veces tarda en "despertar")
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            console.log(`⏰ Timeout disparado para "${nombre}"`);
-            controller.abort();
-        }, 15000); // Aumentado a 15 segundos
-
-        const res = await fetch(`${API_URL}/guardar-gasto`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-                nombre: nombre, 
-                valor: parseFloat(valor), 
-                fecha: fechaFinal, 
-                prioridad: tipo 
-            }),
-            signal: controller.signal,
-            // Agregar keepalive para conexiones persistentes
-            keepalive: true
-        });
-
-        // Limpiar timeout SIEMPRE
-        clearTimeout(timeoutId);
-        
-        console.log(`📡 Status: ${res.status} - "${nombre}"`);
-        
-        // Verificar si fue abortado
-        if (res.type === 'aborted') {
-            throw new Error('Request fue abortado por el navegador');
-        }
-        
-        const responseText = await res.text();
-        console.log(`📄 Respuesta para "${nombre}": ${responseText.substring(0, 150)}...`);
-        
-        if (!res.ok) {
-            let errorMsg = `Error HTTP ${res.status}`;
-            try {
-                const errorData = JSON.parse(responseText);
-                errorMsg = errorData.error || errorData.mensaje || errorMsg;
-            } catch (e) {
-                errorMsg = responseText || errorMsg;
-            }
-            throw new Error(errorMsg);
-        }
-        
-        let resultado;
-        try {
-            resultado = JSON.parse(responseText);
-            console.log(`✅ Gasto "${nombre}" registrado: ID ${resultado.id || 'N/A'}`);
-        } catch (e) {
-            console.error("❌ No se pudo parsear respuesta JSON:", responseText);
-            throw new Error("Respuesta inválida del servidor");
-        }
-        
-        return resultado;
-        
-    } catch (e) {
-        console.error(`❌ Falló registro de "${nombre}":`, e.message);
-        
-        // Manejar diferentes tipos de errores
-        if (e.name === 'AbortError') {
-            console.log(`⏰ "${nombre}" - Timeout, puede que Render esté en modo suspensión`);
-            
-            // Reintentar una vez con timeout más corto
-            console.log(`🔄 Reintentando "${nombre}"...`);
-            await new Promise(r => setTimeout(r, 2000));
-            
-            try {
-                // Segundo intento sin abort controller
-                const res = await fetch(`${API_URL}/guardar-gasto`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        nombre: nombre, 
-                        valor: parseFloat(valor), 
-                        fecha: fechaFinal, 
-                        prioridad: tipo 
-                    })
-                });
-                
-                if (res.ok) {
-                    const resultado = await res.json();
-                    console.log(`✅ Reintento exitoso para "${nombre}": ID ${resultado.id}`);
-                    return resultado;
-                }
-            } catch (retryError) {
-                console.error(`❌ Reintento falló para "${nombre}":`, retryError.message);
-            }
-        }
-        
-        // Si es otro tipo de error, verificar si el backend está activo
-        if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
-            console.log(`🌐 Problema de red para "${nombre}", verificando backend...`);
-            
-            // Verificar si el backend responde
-            try {
-                const healthRes = await fetch(`${API_URL}/health`, { 
-                    signal: AbortSignal.timeout(5000) 
-                });
-                
-                if (healthRes.ok) {
-                    console.log(`✅ Backend responde, fue error temporal para "${nombre}"`);
-                } else {
-                    console.log(`⚠️ Backend no responde correctamente`);
-                }
-            } catch (healthError) {
-                console.log(`🔴 Backend parece caído: ${healthError.message}`);
-            }
-        }
-        
-        throw e; // Re-lanzar el error original
+    } catch (error) { 
+        console.error("❌ Error de conexión al eliminar:", error.message);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
     }
 }
 
@@ -832,332 +1074,36 @@ async function registrarGastoEspecial(nombre, valor, tipo, fecha) {
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 Aplicación iniciada. Vinculando eventos...");
-    actualizarTodo();
-    iniciarActualizacionPeriodicaGrafico();
     
-    // 1. GUARDAR INGRESO
-    document.getElementById('botonGuardar')?.addEventListener('click', async () => {
-        const monto = document.getElementById('CopQuincenal')?.value;
-        const clases = document.getElementById('num-clases')?.value;
-        console.log("🖱️ Clic en Guardar Ingreso. Datos:", { monto, clases });
-
-        if (!monto || !clases) {
-            console.warn("⚠️ Intento de guardado con campos vacíos.");
-            return mostrarNotificacion('Monto y clases son obligatorios', 'error');
-        }
-
-        try {
-            const res = await fetch(`${API_URL}/guardar-ingreso`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ monto: parseFloat(monto), clases: parseInt(clases) })
-            });
-            if (res.ok) {
-                console.log("✅ Ingreso guardado con éxito.");
-                mostrarNotificacion('✅ Ingreso guardado');
-                
-                // --- LIMPIEZA DE INPUTS INGRESO ---
-                document.getElementById('CopQuincenal').value = '';
-                document.getElementById('num-clases').value = '';
-                const descIngreso = document.getElementById('desc-ingreso');
-                if (descIngreso) descIngreso.value = '';
-
-                actualizarTotales();
-            }
-        } catch (e) { console.error("❌ Error al guardar ingreso:", e.message); }
-    });
-
-    document.getElementById('botonCalcularGastos')?.addEventListener('click', async () => {
-        const btn = document.getElementById('botonCalcularGastos');
-        const fechaUnica = document.getElementById('fecha-global-registro')?.value;
-
-        if (!fechaUnica) {
-            mostrarNotificacion('⚠️ Selecciona una fecha', 'error');
-            return;
-        }
-
-        // Recoger gastos
-        const gastosParaGuardar = [];
-        
-        // Gasto principal - ¡IMPORTANTE: Verificar que tenga valor!
-        const descGasto = document.getElementById('desc-gasto')?.value.trim();
-        const valorGasto = document.getElementById('valor-gasto-real')?.value;
-        
-        console.log("🔍 Gasto principal:", { descGasto, valorGasto });
-        
-        if (descGasto && valorGasto && parseFloat(valorGasto) > 0) {
-            gastosParaGuardar.push({ 
-                nombre: descGasto, 
-                valor: valorGasto, 
-                tipo: 'Media' 
-            });
-        }
-        
-        // Otros gastos con validación mejorada
-        const otrosGastos = [
-            { id: 'gasto-compras', nombre: 'Mercado', tipo: 'Variable' },
-            { id: 'gasto-antojos', nombre: 'Antojos', tipo: 'Variable' },
-            { id: 'deuda-corto', nombre: 'Deuda Corto Plazo', tipo: 'Deuda' },
-            { id: 'deuda-largo', nombre: 'Deuda Largo Plazo', tipo: 'Deuda' }
-        ];
-        
-        otrosGastos.forEach(item => {
-            const input = document.getElementById(item.id);
-            const valor = input?.value;
-            
-            console.log(`🔍 ${item.nombre}:`, { valor, parsed: parseFloat(valor) });
-            
-            if (valor && !isNaN(parseFloat(valor)) && parseFloat(valor) > 0) {
-                gastosParaGuardar.push({ 
-                    nombre: item.nombre, 
-                    valor: parseFloat(valor), 
-                    tipo: item.tipo 
-                });
-            }
-        });
-
-        console.log(`📋 Gastos a guardar:`, gastosParaGuardar);
-        
-        if (gastosParaGuardar.length === 0) {
-            mostrarNotificacion('❌ Ingresa al menos un gasto con valor mayor a 0', 'error');
-            return;
-        }
-
-        // Deshabilitar botón
-        btn.disabled = true;
-        const textoOriginal = btn.textContent;
-        btn.textContent = "⌛ Guardando...";
-        
-        try {
-        console.log(`📦 Enviando ${gastosParaGuardar.length} gastos en lote...`);
-        
-        // Usar el endpoint de lote (UNA SOLA LLAMADA)
-        const res = await fetch(`${API_URL}/guardar-gastos-lote`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                gastos: gastosParaGuardar.map(g => ({
-                    nombre: g.nombre,
-                    valor: g.valor,
-                    prioridad: g.tipo
-                })),
-                fecha: fechaUnica
-            })
-        });
-        
-        const resultado = await res.json();
-        
-        if (res.ok) {
-            console.log(`✅ Lote guardado:`, resultado);
-            mostrarNotificacion(`✅ ${resultado.mensaje}`, 'success');
-            
-            // Limpiar formulario
-            document.getElementById('desc-gasto').value = '';
-            document.getElementById('valor-gasto-real').value = '';
-            document.getElementById('gasto-compras').value = '';
-            document.getElementById('gasto-antojos').value = '';
-            document.getElementById('deuda-corto').value = '';
-            document.getElementById('deuda-largo').value = '';
-            
-            // Actualizar tabla
-            await actualizarTodo();
-            
-        } else {
-            throw new Error(resultado.error || 'Error guardando lote');
-        }
-        
-    } catch (error) {
-        console.error("❌ Error en lote:", error);
-        mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
-        
-        // Si falla el lote, intentar individualmente
-        console.log("🔄 Falló el lote, intentando gastos individualmente...");
-        await guardarGastosIndividualmente(gastosParaGuardar, fechaUnica);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = textoOriginal;
-    }
-});
-
-async function guardarGastosIndividualmente(gastos, fecha) {
-    let exitosos = 0;
+    // 1. Establecer fecha actual por defecto
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fecha-ingreso').value = fechaHoy;
+    document.getElementById('fecha-global-registro').value = fechaHoy;
     
-    for (const gasto of gastos) {
-        try {
-            // Usar la versión simple sin abort controller
-            await registrarGastoEspecialSimple(gasto.nombre, gasto.valor, gasto.tipo, fecha);
-            exitosos++;
-            await new Promise(r => setTimeout(r, 500)); // Pequeña pausa
-        } catch (error) {
-            console.error(`❌ ${gasto.nombre} falló individualmente:`, error.message);
-        }
-    }
+    // 2. Vincular botones de ingresos
+    document.getElementById('botonGuardarIngreso').addEventListener('click', guardarIngreso);
+    document.getElementById('btn-exportar-ingresos').addEventListener('click', exportarIngresosCSV);
+    document.getElementById('btn-borrar-todo-ingresos').addEventListener('click', borrarTodoIngresos);
     
-    if (exitosos > 0) {
-        mostrarNotificacion(`✅ ${exitosos} de ${gastos.length} gastos guardados individualmente`, 'success');
-        await actualizarTodo();
-    }
-}
-
-async function registrarGastoEspecialSimple(nombre, valor, tipo, fecha) {
-    const fechaFinal = fecha || new Date().toISOString().split('T')[0];
+    // 3. Vincular botones de gastos
+    document.getElementById('botonGuardarGasto').addEventListener('click', guardarGasto);
+    document.getElementById('btn-exportar-gastos').addEventListener('click', exportarGastosCSV);
+    document.getElementById('botonBorrarHistorial').addEventListener('click', borrarTodoGastos);
     
-    try {
-        const res = await fetch(`${API_URL}/guardar-gasto`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-                nombre: nombre, 
-                valor: parseFloat(valor), 
-                fecha: fechaFinal, 
-                prioridad: tipo 
-            })
-        });
-        
-        if (res.ok) {
-            const resultado = await res.json();
-            console.log(`✅ ${nombre} guardado simple:`, resultado);
-            return resultado;
-        } else {
-            throw new Error('Error del servidor');
+    // 4. Vincular botón de cerrar sesión
+    document.querySelector('.btn-logout').addEventListener('click', cerrarSesion);
+    
+    // 5. Inicializar aplicación
+    inicializarAplicacion();
+    
+    // 6. Actualizar periódicamente (cada 30 segundos)
+    setInterval(() => {
+        if (backendDisponible) {
+            actualizarTodo();
         }
-    } catch (e) {
-        console.error(`❌ ${nombre} falló simple:`, e.message);
-        throw e;
-    }
-}
+    }, 30000);
 
-    // 3. BORRAR TODO EL HISTORIAL (CON MANEJO DE ERROR 500)
-    document.getElementById('botonBorrarHistorial')?.addEventListener('click', async () => {
-        console.log("🖱️ Intento de borrado total iniciado.");
-        
-        if (!confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsta acción borrará PERMANENTEMENTE:\n• Todos los gastos del historial\n• Todos los ingresos registrados\n• Los datos del resumen\n\nEsta acción NO se puede deshacer.')) return;
-
-        const btn = document.getElementById('botonBorrarHistorial');
-        const textoOriginal = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = "⌛ Borrando...";
-        
-        try {
-            mostrarNotificacion('⏳ Borrando todos los datos...', 'info');
-
-            console.log("🔍 Intentando usar /eliminar-todo...");
-            const res = await fetch(`${API_URL}/eliminar-todo`, { 
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            console.log(`📡 Respuesta de /eliminar-todo: ${res.status}`);
-            
-            if (res.ok) {
-                const resultado = await res.json();
-                console.log("✅ Servidor: Todo borrado.", resultado);
-                
-                mostrarNotificacion(`🗑️ Se eliminaron ${resultado.eliminados?.gastos || 0} gastos y ${resultado.eliminados?.ingresos || 0} ingresos`, 'success');
-                
-            } else if (res.status === 404) {
-                console.log("⚠️ /eliminar-todo no encontrado, usando endpoints individuales...");
-                
-                // Si no existe /eliminar-todo, usar endpoints individuales
-                let eliminadosGastos = 0;
-                let eliminadosIngresos = 0;
-                let mensajes = [];
-                
-                // Borrar gastos
-                try {
-                    const resGastos = await fetch(`${API_URL}/eliminar-todos-gastos`, { 
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    
-                    if (resGastos.ok) {
-                        const dataGastos = await resGastos.json();
-                        eliminadosGastos = dataGastos.eliminados || 0;
-                        mensajes.push(`${eliminadosGastos} gastos`);
-                        console.log("✅ Gastos borrados:", dataGastos);
-                    }
-                } catch (e) {
-                    console.error("❌ Error borrando gastos:", e.message);
-                }
-                
-                // Borrar ingresos  
-                try {
-                    const resIngresos = await fetch(`${API_URL}/eliminar-todos-ingresos`, { 
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    
-                    if (resIngresos.ok) {
-                        const dataIngresos = await resIngresos.json();
-                        eliminadosIngresos = dataIngresos.eliminados || 0;
-                        mensajes.push(`${eliminadosIngresos} ingresos`);
-                        console.log("✅ Ingresos borrados:", dataIngresos);
-                    }
-                } catch (e) {
-                    console.error("❌ Error borrando ingresos:", e.message);
-                }
-                
-                if (mensajes.length > 0) {
-                    mostrarNotificacion(`🗑️ Se eliminaron: ${mensajes.join(' y ')}`, 'success');
-                } else {
-                    throw new Error('No se pudo borrar ningún dato');
-                }
-                
-            } else {
-                // Otro error HTTP
-                const errorText = await res.text();
-                console.error("❌ Error del servidor:", res.status, errorText);
-                throw new Error(`Error del servidor: ${res.status} - ${errorText.substring(0, 100)}`);
-            }
-            
-            // Refrescamos toda la interfaz
-            await actualizarTodo();
-            
-            // También limpiamos los campos de entrada de ingresos
-            document.getElementById('CopQuincenal').value = '';
-            document.getElementById('num-clases').value = '';
-            const descIngreso = document.getElementById('desc-ingreso');
-            if (descIngreso) descIngreso.value = '';
-            
-            console.log("✅ Interfaz completamente reseteada.");
-            
-        } catch (e) {
-            console.error("❌ Fallo total en la operación:", e.message);
-            mostrarNotificacion(`❌ Error: ${e.message}`, 'error');
-            
-            // Sugerir recargar la página
-            if (confirm('Hubo un error al borrar los datos. ¿Quieres recargar la página?')) {
-                location.reload();
-            }
-        } finally {
-            btn.disabled = false;
-            btn.textContent = textoOriginal;
-        }
-    });
-
-    // 4. EXPORTAR A CSV
-    document.getElementById('boton-exportar')?.addEventListener('click', () => {
-        console.log("🖱️ Clic en Exportar CSV.");
-        const filas = document.querySelectorAll('#cuerpo-historial tr');
-        if (filas.length === 0 || filas[0].innerText.includes("No hay gastos")) {
-            console.warn("⚠️ No hay datos en la tabla para exportar.");
-            return mostrarNotificacion('No hay datos para exportar', 'error');
-        }
-        let csv = "Fecha,Descripcion,Valor\n";
-        filas.forEach(f => {
-            const c = f.querySelectorAll('td');
-            if (c.length > 2) {
-                csv += `${c[0].innerText},${c[1].innerText},${c[2].innerText.replace(/[^0-9]/g,'')}\n`;
-            }
-        });
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Reporte_${new Date().getTime()}.csv`;
-        a.click();
-        console.log("✅ Archivo CSV generado.");
-    });
+    console.log("✅ Eventos vinculados correctamente");
 });
 
 // --- FUNCIÓN PARA CERRAR SESIÓN ---
@@ -1175,43 +1121,27 @@ function cerrarSesion() {
     }
 }
 
-// función de prueba
-async function probarMultiplesGastos() {
-    console.log("🧪 Probando múltiples gastos...");
+// FUNCIÓN PARA PROBAR CONEXIÓN
+async function probarConexion() {
+    console.log("🔍 Probando conexión con el backend...");
     
-    const fecha = "2026-01-16";
-    const gastosPrueba = [
-        { nombre: "Prueba 1", valor: 100, tipo: "Media" },
-        { nombre: "Prueba 2", valor: 200, tipo: "Variable" },
-        { nombre: "Prueba 3", valor: 300, tipo: "Deuda" }
-    ];
-    
-    let exitosos = 0;
-    
-    for (const gasto of gastosPrueba) {
-        try {
-            const resultado = await registrarGastoEspecial(gasto.nombre, gasto.valor, gasto.tipo, fecha);
-            console.log(`✅ ${gasto.nombre} guardado:`, resultado);
-            exitosos++;
-            await new Promise(r => setTimeout(r, 300)); // Pequeña pausa
-        } catch (error) {
-            console.error(`❌ ${gasto.nombre} falló:`, error.message);
-        }
-    }
-    
-    console.log(`📊 Total: ${exitosos} de ${gastosPrueba.length} exitosos`);
-    
-    if (exitosos > 0) {
-        // Verificar que se guardaron en la base de datos
-        setTimeout(async () => {
-            console.log("🔍 Verificando en base de datos...");
-            const res = await fetch(`${API_URL}/obtener-gastos?t=${Date.now()}`);
+    try {
+        const res = await fetch(`${API_URL}/health`);
+        
+        if (res.ok) {
             const data = await res.json();
-            console.log("📊 Gastos actuales:", data.gastos?.length);
-        }, 2000);
+            console.log("✅ Backend activo:", data);
+            mostrarNotificacion('✅ Conexión establecida con el servidor', 'success');
+            return true;
+        } else {
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
+    } catch (error) {
+        console.error("❌ Backend no disponible:", error.message);
+        mostrarNotificacion('⚠️ No se pudo conectar con el servidor', 'error');
+        return false;
     }
 }
-
 
 // Verificaciones por intervalos de tiempo - VERSIÓN MEJORADA
 let intervaloVerificacion;
@@ -1274,7 +1204,6 @@ function iniciarVerificacionesPeriodicas() {
             
             // Actualizar datos sólo si hay cambios
             if (data.gastos && data.gastos.length > 0) {
-                actualizarTablaConDatos(data.gastos);
                 actualizarTotales();
             }
         })
@@ -1322,4 +1251,36 @@ function iniciarActualizacionPeriodicaGrafico() {
             await actualizarGrafico();
         }
     }, 30000);
+}
+
+// --- FUNCIÓN PARA INICIALIZAR TODO ---
+async function inicializarAplicacion() {
+    console.log("🚀 Inicializando aplicación...");
+    
+    try {
+        // 1. Verificar conexión al backend
+        const conexionOk = await probarConexion();
+        
+        if (!conexionOk) {
+            console.warn("⚠️ Backend no disponible, intentando reconexión...");
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const reconexion = await probarConexion();
+            if (!reconexion) {
+                mostrarNotificacion('⚠️ No se puede conectar al servidor. Verifica tu conexión.', 'error');
+            }
+        }
+        
+        // 2. Cargar datos iniciales
+        await actualizarTodo();
+        
+        // 3. Configurar eventos de teclado
+        configurarEventosTeclado();
+        
+        console.log("✅ Aplicación inicializada correctamente");
+        
+    } catch (error) {
+        console.error("❌ Error en inicialización:", error);
+        mostrarNotificacion('⚠️ Error al inicializar la aplicación', 'error');
+    }
 }

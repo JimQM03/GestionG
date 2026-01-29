@@ -610,6 +610,40 @@ def eliminar_gasto(id):
     finally:
         conn.close()
 
+@app.route('/eliminar-ingreso/<int:id>', methods=['DELETE'])
+def eliminar_ingreso(id):
+    """Elimina un ingreso específico del usuario german"""
+    conn = conectar_neon()
+    if not conn:
+        return jsonify({"error": "Error de conexión a Neon"}), 500
+    
+    try:
+        with conn.cursor() as cur:
+            # Primero obtener información del ingreso para notificar
+            cur.execute("SELECT monto, descripcion FROM ingresos WHERE id = %s AND usuario = 'german'", (id,))
+            ingreso = cur.fetchone()
+            
+            if not ingreso:
+                return jsonify({"error": "Ingreso no encontrado"}), 404
+            
+            # Eliminar el ingreso
+            cur.execute("DELETE FROM ingresos WHERE id = %s AND usuario = 'german'", (id,))
+            conn.commit()
+            
+            monto = float(ingreso[0]) if ingreso[0] else 0
+            descripcion = ingreso[1] or "Sin descripción"
+            
+            return jsonify({
+                "status": "success", 
+                "mensaje": f"Ingreso eliminado: {descripcion} (${monto:,.0f})"
+            })
+                
+    except Exception as e:
+        print(f"❌ Error eliminando ingreso {id}: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 @app.route('/eliminar-todos-gastos', methods=['DELETE'])
 def eliminar_todos_gastos():
     conn = conectar_neon()
@@ -702,7 +736,7 @@ def eliminar_todo():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
-
+        
 @app.route('/guardar-gastos-lote', methods=['POST'])
 def guardar_gastos_lote():
     """Guardar múltiples gastos en una sola transacción"""
