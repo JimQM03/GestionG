@@ -1,2 +1,19 @@
-Version Descarga
-se corrigio el boton de cancelar del modal
+📑 Notas de la Versión Beta 0.1
+
+Estructura Inicial: Implementación del sistema de dos columnas (40/60) mediante CSS Grid.
+
+Funcionalidad Core: Creación de formularios de entrada para Ingresos y Gastos con persistencia en localStorage.
+
+Visualización de Datos: Integración de Chart.js para el gráfico de dona y tablas dinámicas para el historial.
+
+Gestión de Usuario: Sistema básico de visualización de nombre de usuario y cierre de sesión.
+
+Diseño Visual: Paleta de colores profesional basada en azules oscuros (#001f3f) y grises técnicos.
+
+📑 Notas de la versión Beta 0.2:
+
+Prioridad de flujo: Ahora el usuario registra sus ingresos, luego sus gastos, y finalmente ve el gráfico como resumen del día/mes.
+
+Flexibilidad: Al usar display: flex y flex-direction: column dentro del media query, el navegador ignora la jerarquía del HTML para priorizar el order que definimos.
+
+Scroll de seguridad: Si las tablas centradas tienen demasiadas columnas para un celular pequeño, el contenedor permitirá deslizar hacia los lados para no romper el diseño.

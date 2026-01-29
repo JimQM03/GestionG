@@ -57,9 +57,9 @@ header h1 {
    =============================================== */
 .dashboard {
     display: grid;
-    /* La izquierda ocupa el 40% y la central (Gastos) el 60% */
+    /* Por defecto en pantallas grandes: 2 columnas */
     grid-template-columns: 4fr 6fr; 
-    gap: 30px; /* Un poco más de separación entre columnas */
+    gap: 30px;
     padding: 20px;
     align-items: start;
 }
@@ -498,6 +498,7 @@ button:hover {
     9. GRÁFICO DE DONA
    =============================================== */
 #contenedor-grafico {
+    grid-column: 1;
     width: 100%;
     max-width: 100%; /* Evita que se pase a la otra columna */
     box-sizing: border-box;
@@ -547,91 +548,70 @@ button:hover {
 .modal-hidden { display: none !important; }
 
 /* ===============================================
-    11. RESPONSIVE - EVITAR SOLAPAMIENTO
+    11. RESPONSIVE - DISEÑO ADAPTABLE FINAL
    =============================================== */
 
-/* Tablet y Pantallas Medianas (Menos de 1100px) */
+/* --- ESCRITORIO --- */
+@media (min-width: 1101px) {
+    .dashboard {
+        display: grid !important;
+        grid-template-columns: 4fr 6fr !important;
+        gap: 30px !important;
+        padding: 20px;
+    }
+    #ingresos, #historial-ingresos-section, #contenedor-grafico { grid-column: 1 !important; }
+    #horario-gastos, #lista-proximos-pagos { grid-column: 2 !important; }
+}
+
+/* --- MÓVIL Y TABLET (Corrección de alineación) --- */
 @media (max-width: 1100px) {
     .dashboard {
-        /* Pasamos de 2 columnas a 1 sola fila vertical */
-        grid-template-columns: 1fr !important;
-        gap: 25px;
-        padding: 15px;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 20px !important;
+        padding: 15px !important; /* Espacio uniforme en los 4 lados */
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
 
-    /* Reordenamos para que el flujo sea lógico: 
-       1. Ingresos, 2. Gráfico, 3. Gastos */
-    .columna-izquierda { order: 1; }
-    .columna-central { order: 2; }
-
-    /* Forzamos que el gráfico no sea demasiado alto en tablets */
-    #graficoGastos {
-        max-height: 300px !important;
+    section {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;   /* Elimina cualquier empuje a la derecha */
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+        padding: 20px !important;    /* Espacio interno para que el texto no toque los bordes */
     }
 
-    /* Permitimos que las tablas tengan scroll horizontal si el contenido no cabe */
+    /* Orden de elementos */
+    #ingresos { order: 1; }
+    #historial-ingresos-section { order: 2; }
+    #horario-gastos { order: 3; }
+    #lista-proximos-pagos { order: 4; }
+    #contenedor-grafico { order: 5; }
+
+    /* Ajuste de tablas */
     .tabla-contenedor {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
-        border: 1px solid #dee2e6;
-    }
-
-    /* Definimos un ancho mínimo para que los datos no se amontonen al hacer scroll */
-    #tabla-ingresos, 
-    #tabla-historial {
-        min-width: 650px; 
+        width: 100% !important;
+        overflow-x: auto !important;
+        margin: 0 auto !important;
     }
 }
 
-/* Móvil Pequeño (Menos de 600px) */
+/* Ajustes para pantallas muy angostas */
 @media (max-width: 600px) {
-    header {
-        padding: 15px;
-        height: auto;
-        min-height: 120px;
+    header { padding: 10px !important; }
+    .header-content h1 { font-size: 20px !important; }
+    
+    .user-info { 
+        width: 100% !important;
+        justify-content: center !important;
+        margin-top: 10px;
     }
 
-    .header-content {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    header h1 {
-        font-size: 22px;
-    }
-
-    .user-info {
-        justify-content: center;
-        min-width: 100%;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        padding-top: 10px;
-        gap: 10px;
-    }
-
-    #nombre-usuario-display {
-        font-size: 14px;
-        border-right: none;
-        padding-right: 0;
-    }
-
-    /* Reducimos el padding de las secciones para ganar espacio */
-    section {
-        padding: 15px;
-    }
-
-    /* Ajuste de formularios en móvil */
-    .formulario-gasto {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .lado-derecho-gasto textarea {
-        min-height: 100px;
-    }
-
-    /* Botones más grandes para facilitar el toque táctil */
-    button {
-        padding: 15px;
-        font-size: 14px;
+    /* Hace que los formularios ocupen todo el ancho sin márgenes raros */
+    input, select, textarea, button {
+        width: 100% !important;
+        margin: 5px 0 !important;
     }
 }
