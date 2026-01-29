@@ -425,17 +425,28 @@ def guardar_ingreso():
         return jsonify({"error": "Error de conexión a Neon"}), 500
     
     try:
+        # Procesar fecha (similar a guardar_gasto)
+        hoy = datetime.now().date()
+        fecha_obj = hoy
+        
+        fecha_ingreso = data.get('fecha')
+        try:
+            fecha_obj = datetime.strptime(fecha_ingreso, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            fecha_obj = hoy
+        
         with conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO ingresos (usuario, monto, clases, descripcion)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO ingresos (usuario, monto, clases, descripcion, fecha)
+                    VALUES (%s, %s, %s, %s, %s)
                     RETURNING id
                 """, (
                     "german",
                     float(data['monto']),
                     int(data.get('clases', 0)),
-                    data.get('descripcion', '')
+                    data.get('descripcion', ''),
+                    fecha_obj
                 ))
                 
                 id_ingreso = cur.fetchone()[0]
@@ -443,7 +454,8 @@ def guardar_ingreso():
         return jsonify({
             "status": "success",
             "mensaje": "Ingreso guardado",
-            "id": id_ingreso
+            "id": id_ingreso,
+            "fecha": str(fecha_obj)
         })
             
     except Exception as e:
@@ -451,7 +463,7 @@ def guardar_ingreso():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
-
+        
 @app.route('/obtener-gastos', methods=['GET'])
 def obtener_gastos():
     conn = conectar_neon()
@@ -736,7 +748,7 @@ def eliminar_todo():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
-        
+
 @app.route('/guardar-gastos-lote', methods=['POST'])
 def guardar_gastos_lote():
     """Guardar múltiples gastos en una sola transacción"""
@@ -894,7 +906,7 @@ def cors_test():
 
 @app.route('/estadisticas-gastos', methods=['GET'])
 def estadisticas_gastos():
-    """Obtiene estadísticas de gastos agrupados por categoría"""
+    """Obtiene estadísticas de gastos agrupados por las 12 categorías REALES"""
     conn = conectar_neon()
     if not conn:
         return jsonify({"error": "Error de conexión", "estadisticas": {}})
@@ -903,69 +915,68 @@ def estadisticas_gastos():
         with conn.cursor(row_factory=dict_row) as cur:
             # Obtener todos los gastos
             cur.execute("""
-                SELECT nombre, valor, prioridad
+                SELECT nombre, valor
                 FROM gastos 
                 WHERE usuario = 'german'
-                ORDER BY fecha DESC
             """)
             
             gastos = cur.fetchall()
             
-            # Inicializar categorías
+            # Inicializar las 12 categorías EXACTAS del selector
             categorias = {
-                'Especificos': 0,
-                'Variables': 0,
-                'Deudas': 0
+                'Vivienda': 0,
+                'Alimentacion': 0,
+                'Transporte': 0,
+                'Servicios': 0,
+                'Educacion': 0,
+                'Salud': 0,
+                'Entretenimiento': 0,
+                'Ropa': 0,
+                'Deudas': 0,
+                'Ahorros': 0,
+                'Otros': 0
             }
             
-            # Palabras clave para identificar categorías
-            keywords_especificos = ['pago', 'suscripcion', 'servicio', 'tarifa', 'cuota', 'impuesto']
-            keywords_variables = ['mercado', 'comida', 'transporte', 'entretenimiento', 'salida', 'antojos', 'compra']
-            keywords_deudas = ['deuda', 'prestamo', 'credito', 'financiacion']
-            
-            # Clasificar cada gasto
+            # Clasificar cada gasto - VERSIÓN SIMPLIFICADA
             for gasto in gastos:
-                nombre = gasto['nombre'].lower()
+                nombre_completo = gasto['nombre']
                 valor = float(gasto['valor'])
-                prioridad = gasto['prioridad']
                 
-                # Si la prioridad ya indica la categoría, usarla
-                if prioridad.lower() == 'deuda':
-                    categorias['Deudas'] += valor
-                elif prioridad.lower() == 'variable':
-                    categorias['Variables'] += valor
-                else:
-                    # Clasificar por palabras clave en el nombre
-                    if any(keyword in nombre for keyword in keywords_deudas):
-                        categorias['Deudas'] += valor
-                    elif any(keyword in nombre for keyword in keywords_variables):
-                        categorias['Variables'] += valor
-                    elif any(keyword in nombre for keyword in keywords_especificos):
-                        categorias['Especificos'] += valor
-                    else:
-                        # Por defecto, usar la prioridad
-                        if prioridad.lower() == 'media' or prioridad.lower() == 'alta':
-                            categorias['Especificos'] += valor
-                        else:
-                            categorias['Variables'] += valor
+                # Por defecto
+                categoria = 'Otros'
+                
+                # Extraer categoría del formato "Categoría: Descripción"
+                if ':' in nombre_completo:
+                    # Tomar solo la primera parte antes de ":"
+                    partes = nombre_completo.split(':')
+                    posible_categoria = partes[0].strip()
+                    
+                    # Verificar si es una de nuestras 12 categorías
+                    if posible_categoria in categorias:
+                        categoria = posible_categoria
+                    # Si es "Alimentación" (con tilde) mapear a "Alimentacion" (sin tilde)
+                    elif posible_categoria == 'Alimentación':
+                        categoria = 'Alimentacion'
+                
+                # Sumar al total de la categoría
+                categorias[categoria] += valor
+            
+            # Filtrar categorías con valor 0
+            categorias_filtradas = {k: v for k, v in categorias.items() if v > 0}
             
             # Calcular porcentajes
-            total = sum(categorias.values())
+            total = sum(categorias_filtradas.values())
             porcentajes = {}
             if total > 0:
-                for categoria, valor in categorias.items():
+                for categoria, valor in categorias_filtradas.items():
                     porcentajes[categoria] = round((valor / total) * 100, 1)
             
             return jsonify({
                 "status": "success",
-                "categorias": categorias,
+                "categorias": categorias_filtradas,
                 "porcentajes": porcentajes,
                 "total": total,
-                "detalle": {
-                    "Especificos": f"${categorias['Especificos']:,.0f}",
-                    "Variables": f"${categorias['Variables']:,.0f}",
-                    "Deudas": f"${categorias['Deudas']:,.0f}"
-                }
+                "detalle": {k: f"${v:,.0f}" for k, v in categorias_filtradas.items()}
             })
             
     except Exception as e:
@@ -973,8 +984,7 @@ def estadisticas_gastos():
         return jsonify({"error": str(e), "estadisticas": {}})
     finally:
         conn.close()
-
-
+        
 # ================================================
 # PUNTO DE ENTRADA (DEBE SER LO ÚLTIMO)
 # ================================================
