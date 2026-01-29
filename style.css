@@ -86,8 +86,10 @@ section h3,
     margin-top: 0;
     text-transform: none;
     letter-spacing: 0.5px;
-    display: flex;
-    align-items: center;
+    /* Cambiamos flex por block para que el text-align funcione */
+    display: block; 
+    text-align: center;
+    width: 100%;
 }
 
 /* 2. ESTILO PARA SUBTÍTULOS DE FORMULARIO
@@ -288,12 +290,13 @@ button:hover {
     font-size: 13px !important;
 }
 
-/* Botón Exportar pequeño al lado */
+/* Movemos los botones de exportar a la derecha sin que afecten el centro del título */
 .btn-exportar {
+    position: absolute; /* Lo saca del flujo normal para no empujar el título */
+    right: 0;
     width: auto !important;
-    padding: 6px 12px !important;
+    padding: 8px 15px !important;
     font-size: 13px !important;
-    margin: 0 !important;
 }
 
 /* ===============================================
@@ -332,25 +335,31 @@ button:hover {
     border: 1px solid #dee2e6;
 }
 
-/* Encabezados de tabla (Título + Botón Exportar alineados horizontalmente) */
+/* Encabezados de tabla (Título + Botón Exportar) */
 .header-tabla, 
 .header-historial {
     display: flex !important;
-    flex-direction: row !important;
-    justify-content: space-between !important;
+    justify-content: center !important; /* Centra el título */
     align-items: center !important;
     margin-bottom: 20px;
     width: 100%;
     border-bottom: 2px solid #e6f2ff;
     padding-bottom: 10px;
+    position: relative; /* Para que el botón no empuje al título */
 }
 
 .header-tabla h3, 
 .header-historial h2 {
     margin: 0 !important;
-    border-bottom: none !important;
-    padding-bottom: 0 !important;
-    font-size: 20px !important;
+    text-align: center !important;
+    width: 100%;
+}
+
+/* Botón exportar flota a la derecha sin estorbar al centro */
+.btn-exportar {
+    position: absolute !important;
+    right: 10px;
+    width: auto !important;
 }
 
 /* Configuración General de Tablas */
@@ -358,62 +367,59 @@ button:hover {
 #tabla-historial {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto !important;
+    table-layout: fixed; /* Forzamos anchos fijos para control total */
     background-color: white; 
 }
 
-/* Estilos de encabezados (Celdas oscuras superiores) */
+/* Estilos de encabezados (Celdas oscuras) */
 #tabla-ingresos th, 
 #tabla-historial th {
     background-color: #001f3f;
     color: white;
-    padding: 12px 10px;
-    text-align: left;
+    padding: 12px 5px;
+    text-align: center; /* CENTRADO DE ENCABEZADOS */
     font-size: 13px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
-/* --- COLUMNAS TABLA INGRESOS (En la columna estrecha de 40%) --- */
-#tabla-ingresos th:nth-child(1), #tabla-ingresos td:nth-child(1) { width: 90px; } /* Fecha */
-#tabla-ingresos th:nth-child(2), #tabla-ingresos td:nth-child(2) { width: auto; } /* Descripción */
-#tabla-ingresos th:nth-child(3), #tabla-ingresos td:nth-child(3) { width: 120px; text-align: right; } /* Monto */
-#tabla-ingresos th:nth-child(4), #tabla-ingresos td:nth-child(4) { width: 50px; text-align: center; }  /* Acción */
+/* --- COLUMNAS TABLA INGRESOS (40% de ancho total) --- */
+#tabla-ingresos th:nth-child(1), #tabla-ingresos td:nth-child(1) { width: 25%; text-align: center; } /* Fecha */
+#tabla-ingresos th:nth-child(2), #tabla-ingresos td:nth-child(2) { width: 45%; text-align: center; } /* Desc */
+#tabla-ingresos th:nth-child(3), #tabla-ingresos td:nth-child(3) { width: 20%; text-align: center; } /* Monto */
+#tabla-ingresos th:nth-child(4), #tabla-ingresos td:nth-child(4) { width: 10%; text-align: center; } /* Acción */
 
-/* --- COLUMNAS TABLA GASTOS (Optimizada para la columna ancha de 60%) --- */
-#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 95px; } /* Fecha */
-#tabla-historial th:nth-child(2), #tabla-historial td:nth-child(2) { width: auto; } /* Descripción */
-#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 120px; } /* Categoría */
-#tabla-historial th:nth-child(4), #tabla-historial td:nth-child(4) { width: 135px; text-align: right; } /* Costo */
-#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 100px; } /* Prioridad */
-#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { width: 50px; text-align: center; }  /* Acción */
+/* --- COLUMNAS TABLA GASTOS (60% de ancho total) --- */
+#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 15%; text-align: center; } /* Fecha */
+#tabla-historial th:nth-child(2), #tabla-historial td:nth-child(2) { width: 25%; text-align: center; } /* Desc */
+#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 20%; text-align: center; } /* Cat */
+#tabla-historial th:nth-child(4), #tabla-historial td:nth-child(4) { width: 15%; text-align: center; } /* Costo */
+#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 15%; text-align: center; } /* Prioridad */
+#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { width: 10%; text-align: center; } /* Acción */
 
 /* Estilos de las celdas de datos */
 #tabla-ingresos td, 
 #tabla-historial td {
-    padding: 14px 10px; /* Espaciado generoso para evitar amontonamiento */
+    padding: 14px 5px;
     border-bottom: 1px solid #eee;
     font-size: 14px;
     color: #333;
-    line-height: 1.4;
     vertical-align: middle;
     word-break: break-word;
+    text-align: center; /* CENTRADO DE DATOS */
 }
 
-/* Formato especial para Números (Monto y Costo) */
+/* Mantener el formato de dinero pero centrado */
 #tabla-historial td:nth-child(4), 
 #tabla-ingresos td:nth-child(3) {
     font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
     font-size: 15px;
-    padding-right: 15px;
 }
 
 /* Colores de montos */
-#tabla-ingresos td:nth-child(3) { color: #28a745; } /* Verde para ingresos */
-#tabla-historial td:nth-child(4) { color: #dc3545; } /* Rojo para gastos */
+#tabla-ingresos td:nth-child(3) { color: #28a745; } 
+#tabla-historial td:nth-child(4) { color: #dc3545; } 
 
-/* Efecto visual al pasar el ratón */
 #tabla-ingresos tr:hover, 
 #tabla-historial tr:hover {
     background-color: #f8f9fa;
