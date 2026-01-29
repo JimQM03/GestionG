@@ -57,8 +57,8 @@ header h1 {
    =============================================== */
 .dashboard {
     display: grid;
-    /* Forzamos que la columna 1 tenga al menos 320px y la 2 al menos 400px */
-    grid-template-columns: minmax(320px, 1fr) minmax(400px, 1.5fr) minmax(250px, 0.8fr);
+    /* En pantallas grandes: 3 columnas */
+    grid-template-columns: minmax(320px, 2.2fr) minmax(380px, 2.5fr) minmax(200px, 1.3fr);
     gap: 20px;
     padding: 20px;
     align-items: start;
@@ -480,105 +480,87 @@ button:hover {
     11. RESPONSIVE - EVITAR SOLAPAMIENTO
    =============================================== */
 
-/* Tablet (1024px - 769px) */
+/* Tablet y Móvil (Cualquier pantalla menor a 1024px) */
 @media (max-width: 1024px) {
     .dashboard {
-        grid-template-columns: 1fr;
-        display: grid;
-        gap: 20px;
+        /* Convertimos el grid de 3 columnas en 1 sola fila vertical */
+        grid-template-columns: 1fr !important;
+        gap: 30px;
+        padding: 15px;
     }
-    
-    /* 2 columnas en tablet */
+
+    /* Liberamos las columnas de su posición fija en el grid */
     .columna-izquierda,
     .columna-central,
     .columna-derecha {
+        grid-column: auto !important;
         width: 100%;
         max-width: 100%;
     }
-    
-    .columna-derecha {
-        order: 3; /* El gráfico siempre al final */
-    }
-}
 
-/* Móvil grande (768px - 481px) */
-@media (max-width: 768px) {
-    .dashboard {
-        /* Forzamos una sola columna */
-        grid-template-columns: 1fr !important;
-        padding: 10px;
+    /* Reordenamos para que el flujo sea lógico en móvil:
+       1. Registro e Historial Ingresos
+       2. Registro e Historial Gastos
+       3. Gráfico de distribución */
+    .columna-izquierda { order: 1; }
+    .columna-central { order: 2; }
+    .columna-derecha { order: 3; }
+
+    /* Ajuste de los encabezados de tabla para que el botón no se amontone */
+    .header-tabla, .header-historial {
+        flex-direction: row; 
+        flex-wrap: wrap; /* Si el título es muy largo, el botón baja */
+        gap: 10px;
     }
 
-    /* Evita que las tablas se salgan del contenedor */
-    .table-responsive, .tabla-contenedor {
+    /* Aseguramos que las tablas permitan scroll horizontal sin romper el layout */
+    .tabla-contenedor {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
 
-    #tabla-ingresos,
-    #tabla-historial {
-        /* Quitamos el display: block que rompe las celdas */
-        display: table;
-         min-width: 600px; /* Permite scroll horizontal sin encimar texto */
+    #tabla-ingresos, #tabla-historial {
+        min-width: 500px; /* Evita que las columnas se compriman demasiado */
     }
 }
 
-/* Móvil pequeño (480px y menos) */
-@media (max-width: 480px) {
-    .dashboard {
-        padding: 10px;
-        gap: 15px;
-    }
-    
-    section {
+/* Móvil Pequeño (Menos de 600px) */
+@media (max-width: 600px) {
+    header {
         padding: 15px;
-        margin-bottom: 15px;
-    }
-    
-    button {
-        padding: 10px 20px;
-        font-size: 14px;
-    }
-     /* Tablas más compactas en móvil pequeño */
-    #tabla-ingresos,
-    #tabla-historial {
-        min-width: 400px;
-        font-size: 13px;
+        height: auto;
     }
 
-    #tabla-ingresos th,
-    #tabla-historial th,
-    #tabla-ingresos td,
-    #tabla-historial td {
-        padding: 8px 10px;
-    }
-    /* Ocultar más columnas en móviles pequeños */
-    #tabla-historial th:nth-child(3),
-    #tabla-historial td:nth-child(3) { /* Ocultar Categoría en móviles muy pequeños */
-        display: none;
-    }
-    
-    #tabla-ingresos th:nth-child(3),
-    #tabla-ingresos td:nth-child(3) { /* Ocultar Descripción en móviles muy pequeños */
-        display: none;
-    }
-    
-    /* Ajustar formularios para móviles pequeños */
-    .formulario-gasto {
+    .header-content {
         flex-direction: column;
+        text-align: center;
+        gap: 15px;
     }
-    
-    .lado-izquierdo-gasto,
-    .lado-derecho-gasto {
-        width: 100%;
+
+    /* Ocultamos el espacio vacío equilibrador en móvil */
+    header .header-content div:first-child {
+        display: none;
     }
-    
-    .lado-derecho-gasto textarea {
-        min-height: 80px;
+
+    header h1 {
+        font-size: 26px;
+        order: 1;
     }
-    
-    /* Reducir tamaño del gráfico en móviles pequeños */
-    #graficoGastos {
-        height: 200px !important;
+
+    .user-info {
+        order: 2;
+        justify-content: center;
+        min-width: 100%;
+        border-top: 1px solid #4a5568;
+        padding-top: 10px;
+    }
+
+    #nombre-usuario-display {
+        border-right: none;
+        padding-right: 0;
+    }
+
+    section {
+        padding: 15px;
     }
 }
