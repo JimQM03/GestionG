@@ -232,10 +232,24 @@ button:hover {
 }
 
 .btn-eliminar {
-    background-color: transparent;
-    color: #ff4d4d;
-    padding: 5px 10px;
-    width: auto;
+    background-color: transparent !important;
+    color: #ff4d4d !important;
+    padding: 4px !important;
+    font-size: 16px !important; /* Tamaño del icono 🗑️ */
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 50% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.btn-eliminar:hover {
+    background-color: #fff5f5 !important;
+    color: #c53030 !important;
 }
 
 #boton-exportar,
@@ -380,12 +394,21 @@ button:hover {
 }
 
 /* --- COLUMNAS TABLA GASTOS (6 COLUMNAS - CORRECCIÓN DE ALINEACIÓN) --- */
-/* Forzamos anchos mínimos en las columnas de datos cortos */
-#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 90px; }  /* Fecha */
-#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 110px; } /* Categoría */
-#tabla-historial th:nth-child(4), #tabla-historial td:nth-child(4) { width: 90px; }  /* Costo */
-#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 85px; }  /* Prioridad */
-#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { width: 60px; }  /* Acción */
+/* Achicamos Fecha y Acción para priorizar números y descripción */
+#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 80px; }  /* Fecha */
+#tabla-historial th:nth-child(2), #tabla-historial td:nth-child(2) { width: auto; }  /* Descripción (Flexible) */
+#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 95px; }  /* Categoría */
+
+/* Ensanchamos estas dos para que los números respiren */
+#tabla-historial th:nth-child(4), #tabla-historial td:nth-child(4) { width: 100px; text-align: right; } /* Costo */
+#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 95px; }  /* Prioridad */
+
+/* Columna acción al mínimo (solo el icono) */
+#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { 
+    width: 45px; 
+    text-align: center; 
+    padding: 12px 2px; /* Menos padding lateral aquí */
+}
 
 /* 3. El truco maestro: Forzar el salto de línea y evitar el solapamiento */
 #tabla-historial td {
@@ -418,6 +441,13 @@ button:hover {
     border-bottom: 1px solid #eee;
     word-wrap: break-word;
     vertical-align: middle;
+}
+
+#tabla-historial td:nth-child(4), 
+#tabla-ingresos td:nth-child(3) {
+    font-family: 'Courier New', Courier, monospace; /* Fuente monoespaciada para alinear decimales */
+    font-weight: bold;
+    padding-right: 15px; /* Espacio al final del número */
 }
 
 /* Colores dinámicos para montos */
