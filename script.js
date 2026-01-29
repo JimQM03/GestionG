@@ -165,6 +165,9 @@ function configurarEventosTeclado() {
 function limpiarFormularios() {
     console.log("🧹 Limpiando formularios...");
     
+    // IMPORTANTE: Mantener la fecha global que el usuario seleccionó
+    const fechaGlobal = document.getElementById('fecha-global-registro').value;
+    
     // Restablecer fecha de ingresos a hoy
     const hoy = new Date().toISOString().split('T')[0];
     document.getElementById('fecha-ingreso').value = hoy;
@@ -173,11 +176,16 @@ function limpiarFormularios() {
     document.getElementById('monto-ingreso').value = '';
     document.getElementById('desc-ingreso').value = '';
     
-    // Limpiar solo campos específicos de gastos (mantener fecha y categoría)
+    // Limpiar solo campos específicos de gastos (MANTENER fecha y categoría)
     document.getElementById('valor-gasto-real').value = '';
     document.getElementById('desc-gasto').value = '';
     
-    console.log("✅ Formularios limpiados");
+    // RESTAURAR la fecha global que se mantuvo
+    if (fechaGlobal) {
+        document.getElementById('fecha-global-registro').value = fechaGlobal;
+    }
+    
+    console.log("✅ Formularios limpiados (fecha global mantenida)");
 }
 
 // --- FUNCIONES DE INGRESOS ---
@@ -197,6 +205,12 @@ async function guardarIngreso() {
     const descripcion = document.getElementById('desc-ingreso').value;
 
     console.log("📋 Datos ingresos:", { fecha, monto, descripcion });
+
+    // Deshabilitar botón para evitar doble clic
+    const boton = document.getElementById('botonGuardarIngreso');
+    const textoOriginal = boton.textContent;
+    boton.textContent = "Guardando...";
+    boton.disabled = true;
 
     try {
         const res = await fetch(`${API_URL}/guardar-ingreso`, {
@@ -219,20 +233,34 @@ async function guardarIngreso() {
         console.log("✅ Ingreso guardado con éxito:", resultado);
         mostrarNotificacion('✅ Ingreso guardado correctamente', 'success');
         
-        // ✅ LIMPIAR FORMULARIOS
+        // Limpiar formularios SIN REFRESCAR INMEDIATAMENTE
         limpiarFormularios();
         
-        // ✅ REFRESCAR LA PÁGINA DESPUÉS DE 500ms
-        setTimeout(() => {
-            console.log("🔄 Refrescando página para actualizar datos...");
-            window.location.reload();
-        }, 500);
+        // Actualizar datos en segundo plano sin refrescar la página
+        try {
+            await cargarIngresos();
+            await cargarGastos(); // Para mantener consistencia
+            await actualizarTotales();
+            await actualizarGrafico();
+            console.log("🔄 Datos actualizados sin refrescar página");
+        } catch (error) {
+            console.log("⚠️ Error al actualizar datos:", error.message);
+        }
+        
+        // Restaurar botón
+        boton.textContent = textoOriginal;
+        boton.disabled = false;
         
     } catch (error) { 
         console.error("❌ Error al guardar ingreso:", error.message);
         mostrarNotificacion(`Error: ${error.message}`, 'error');
+        
+        // Restaurar botón en caso de error
+        boton.textContent = textoOriginal;
+        boton.disabled = false;
     }
 }
+
 // --- FUNCIÓN PARA VERIFICAR SI BACKEND PROCESÓ ---
 async function verificarProcesamiento(id, tipo) {
     console.log(`🔍 Verificando procesamiento de ${tipo} ID: ${id}`);
@@ -459,13 +487,19 @@ async function guardarGasto() {
         return;
     }
     
-    // Obtener valores del formulario ANTES de limpiar
+    // Obtener valores del formulario
     const fecha = document.getElementById('fecha-global-registro').value;
     const categoria = document.getElementById('categoria-gasto').value;
     const monto = document.getElementById('valor-gasto-real').value;
     const descripcion = document.getElementById('desc-gasto').value;
     
     console.log("📋 Datos gasto:", { fecha, categoria, monto, descripcion });
+    
+    // Deshabilitar botón para evitar doble clic
+    const boton = document.getElementById('botonGuardarGasto');
+    const textoOriginal = boton.textContent;
+    boton.textContent = "Guardando...";
+    boton.disabled = true;
     
     try {
         // Determinar prioridad basada en categoría
@@ -493,18 +527,31 @@ async function guardarGasto() {
         console.log("✅ Gasto guardado con éxito:", resultado);
         mostrarNotificacion('✅ Gasto guardado correctamente', 'success');
         
-        // ✅ CORRECCIÓN: USAR FUNCIÓN DE LIMPIEZA UNIFICADA
+        // Limpiar formularios SIN REFRESCAR INMEDIATAMENTE
         limpiarFormularios();
         
-        // ✅ REFRESCAR LA PÁGINA DESPUÉS DE 500ms
-        setTimeout(() => {
-            console.log("🔄 Refrescando página para actualizar datos...");
-            window.location.reload();
-        }, 500);
+        // Actualizar datos en segundo plano sin refrescar la página
+        try {
+            await cargarIngresos();
+            await cargarGastos(); // Para mantener consistencia
+            await actualizarTotales();
+            await actualizarGrafico();
+            console.log("🔄 Datos actualizados sin refrescar página");
+        } catch (error) {
+            console.log("⚠️ Error al actualizar datos:", error.message);
+        }
+        
+        // Restaurar botón
+        boton.textContent = textoOriginal;
+        boton.disabled = false;
         
     } catch (error) { 
         console.error("❌ Error al guardar gasto:", error.message);
         mostrarNotificacion(`Error: ${error.message}`, 'error');
+        
+        // Restaurar botón en caso de error
+        boton.textContent = textoOriginal;
+        boton.disabled = false;
     }
 }
 
@@ -738,20 +785,25 @@ async function actualizarTotales() {
         const data = await res.json();
         console.log("📊 Datos recibidos:", data);
         
-        // Solo actualizar total-gastado que SÍ existe
+        // ✅ ACTUALIZAR AMBOS TOTALES - ARREGLADO
         const displayTotalHistorial = document.getElementById('total-gastado');
+        const displayTotalIngresos = document.getElementById('total-ingresos');
+        
         if (displayTotalHistorial) {
             displayTotalHistorial.textContent = `$${(data.total_gastos || 0).toLocaleString('es-CO')}`;
         }
         
+        if (displayTotalIngresos) {
+            displayTotalIngresos.textContent = `$${(data.total_ingresos || 0).toLocaleString('es-CO')}`;
+        }
+        
+        console.log(`💰 Total ingresos: $${(data.total_ingresos || 0).toLocaleString('es-CO')}`);
         console.log(`💰 Total gastos: $${(data.total_gastos || 0).toLocaleString('es-CO')}`);
         
     } catch (e) { 
         console.error("❌ Error al actualizar totales:", e.message);
     }
 }
-
-
 
 // --- FUNCIÓN PARA ACTUALIZAR EL GRÁFICO ---
 async function actualizarGrafico() {
