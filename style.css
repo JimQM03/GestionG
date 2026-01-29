@@ -79,24 +79,46 @@ header h1 {
     min-width: 0; /* Evita que el contenido desborde */
 }
 
-section {
-    background-color: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-section h2, section h3 {
-    margin-top: 0;
+/* 1. ESTILO PARA TÍTULOS PRINCIPALES 
+   (Planificador, Registro de Ingresos, Historiales, Distribución) */
+section h2, 
+section h3, 
+.header-tabla h3, 
+.header-historial h2 {
     color: #001f3f;
-    font-size: 18px;
-}
-
-section h2 {
-    font-size: 22px;
+    font-size: 20px;
+    font-weight: 700;
     margin-bottom: 20px;
+    margin-top: 0;
+    text-transform: none;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
 }
 
+/* 2. ESTILO PARA SUBTÍTULOS DE FORMULARIO
+   (Fecha de gastos, Fecha de ingresos, Registro de gastos interno) */
+.seccion-fecha-global h3,
+#ingresos h3,
+.seccion-gastos h3,
+label[for="fecha-ingreso"] {
+    color: #4a5568 !important; /* Gris profesional */
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px !important;
+    border: none !important; /* Sin líneas */
+}
+
+/* 3. MANTENER EL CONTENEDOR BLANCO IMPECABLE */
+section {
+    background-color: white !important;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
 /* ===============================================
     3. FORMULARIOS DE INGRESOS Y GASTOS
    =============================================== */
@@ -331,6 +353,14 @@ button:hover {
 #tabla-ingresos th:nth-child(2), #tabla-ingresos td:nth-child(2) { width: auto; }  /* Descripción (Flexible) */
 #tabla-ingresos th:nth-child(3), #tabla-ingresos td:nth-child(3) { width: 95px; }  /* Monto */
 #tabla-ingresos th:nth-child(4), #tabla-ingresos td:nth-child(4) { width: 50px; }  /* Acción */
+
+/* --- COLUMNAS TABLA GASTOS (6 COLUMNAS - CORREGIDO) --- */
+#tabla-historial th:nth-child(1) { width: 90px; }  /* Fecha */
+#tabla-historial th:nth-child(2) { width: auto; }  /* Descripción */
+#tabla-historial th:nth-child(3) { width: 100px; } /* Categoría */
+#tabla-historial th:nth-child(4) { width: 90px; }  /* Costo */
+#tabla-historial th:nth-child(5) { width: 80px; }  /* Prioridad */
+#tabla-historial th:nth-child(6) { width: 60px; }  /* Acción */
 
 #tabla-ingresos td, 
 #tabla-historial td {
