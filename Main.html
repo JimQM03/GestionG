@@ -10,7 +10,9 @@
     <!-- Encabezado principal -->
     <header>
         <div class="header-content">
+
             <h1>GestionG</h1>
+            
             <div class="user-info">
                 <span id="nombre-usuario-display">Cargando...</span>
                 <button onclick="cerrarSesion()" class="btn-logout">Cerrar Sesion</button>
@@ -18,150 +20,155 @@
         </div>
     </header>
 
-
     <main class="dashboard">
-        <!-- ============================================
-             COLUMNA IZQUIERDA - Resumen y entradas 
-             ============================================ -->
-        <div class="columna-izquierda">
+    <!-- ===============================================
+        COLUMNA IZQUIERDA DE INGRESOS
+        =============================================== -->
+
+    <div class="columna-izquierda">
+        <section id="ingresos">
+            <h3>Registro de Ingresos</h3>
+            <div class="formulario-ingreso">
+                <label for="fecha-ingreso" style="font-size: 12px; color: #666;">Fecha del ingreso</label>
+                <input type="date" id="fecha-ingreso">
+                <input type="number" id="monto-ingreso" placeholder="Monto en pesos">
+                <textarea id="desc-ingreso" placeholder="Descripción del ingreso" rows="2"></textarea>
+                <button id="botonGuardarIngreso">Guardar Ingreso</button>
+            </div>
+        </section>
+
+        <section id="historial-ingresos-section"> 
+            <div class="header-tabla">
+                <h3>Historial de Ingresos</h3>
+                <button id="btn-exportar-ingresos" class="btn-exportar">Exportar</button>
+            </div>
             
-            <!-- Seccion de resumen: muestra los calculos -->
-            <section id="resumenes">
-                <h3>Tu resumen</h3>
-                <div class="resumen-grid">
-                    <p>Sueldo: <span id="Mostrar-sueldo">0</span> COP</p>   
-                    <p>Ahorro Quincenal (10%): <span id="Ahorro-quincenal">0</span> COP</p>
-                    <p>Valor por clase: <span id="valor-clase">0</span> COP</p>
-                </div>
-            </section>
+            <div class="tabla-contenedor"> <table id="tabla-ingresos">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th> 
+                            <th>Descripción</th>
+                            <th>Monto</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-tabla-ingresos"></tbody>
+                </table>
+            </div>
 
-            <!-- Entradas de informacion basica -->
-            <section id="ingresos">
-                <h3>Datos de ingresos</h3>
-                <input type="number" id="num-clases" placeholder="Numero de clases dadas">
-                <input type="number" id="CopQuincenal" placeholder="Sueldo en pesos">
-                <textarea id="desc-ingreso" placeholder="Descripcion del ingreso (Ej: Bono Extra)" rows="2"></textarea>
-                <button id="botonGuardar" class="btn-primario">Guardar</button>
-            </section>
+            <div class="caja-total">
+                <strong>Total ingresos: </strong>
+                <span id="total-ingresos">$0</span>
+            </div>
+            <button id="btn-borrar-todo-ingresos" class="btn-limpiar">Borrar Historial</button>
+        </section>
+    </div>
 
-            <!--Grafico de gastos-->
-            <section id="contenedor-grafico">
-                <h3>Distribución de Gastos</h3>
-                <canvas id="graficoGastos"></canvas>
-            </section>
-
-        </div>
-
-        <!-- ============================================
-             COLUMNA DERECHA - Planificador de gastos
-        ============================================ -->
-        <div class="columna-derecha">
-            <section id="horario-gastos">
-                <h2>Planificador de Gastos</h2>
-                
-                <!-- Gastos que son todos los meses -->
-                <div class="seccion-gastos">
-                    <!--Seleccion de fecha-->
-                    <div class="seccion-fecha-global">
-                        <h3>Fecha de los registros:</h3>
-                        <input type="date" id="fecha-global-registro">
-                    </div>
-                    <h3>Gastos Especificos</h3>
-                    
-                    <div class="fila-gasto">
+    <!-- ===============================================
+        COLUMNA CENTRAL DE GASTOS
+        =============================================== -->
+    <div class="columna-central">
+        <section id="horario-gastos">
+            <h2>Planificador de Gastos</h2>
+            <div class="seccion-fecha-global">
+                <h3>Fecha del gasto:</h3>
+                <input type="date" id="fecha-global-registro">
+            </div>
+            <div class="seccion-gastos">
+                <h3>Registro de gastos</h3>
+                <div class="formulario-gasto">
+                    <div class="lado-izquierdo-gasto">
+                        <select id="categoria-gasto">
+                            <option value="">Seleccionar categoría</option>
+                            <option value="Vivienda">🏠 Vivienda</option>
+                            <option value="Alimentacion">🍎 Alimentación</option>
+                            <option value="Transporte">🚗 Transporte</option>
+                            <option value="Servicios">⚡ Servicios</option>
+                            <option value="Educacion">📚 Educación</option>
+                            <option value="Salud">🏥 Salud</option>
+                            <option value="Entretenimiento">🎬 Entretenimiento</option>
+                            <option value="Ropa">👕 Ropa</option>
+                            <option value="Deudas">💳 Deudas</option>
+                            <option value="Ahorros">💰 Ahorros</option>
+                            <option value="Otros">📦 Otros</option>
+                        </select>
                         <input type="number" id="valor-gasto-real" placeholder="Monto $">
                     </div>
-
-                    <div class="fila-gasto">
-                        <textarea id="desc-gasto" placeholder="¿En que consistio este gasto?" rows="2" style="width: 100%;"></textarea>
+                    <div class="lado-derecho-gasto">
+                         <textarea id="desc-gasto" placeholder="Descripción (Ej: Arriendo)" rows="4"></textarea>
                     </div>
                 </div>
+                <button id="botonGuardarGasto">Guardar Gasto</button>
+            </div>               
+        </section>
 
-                <!-- Gastos variables del dia a dia -->
-                <div class="seccion-gastos">
-                    <h3>Gastos Variables</h3>
-                    <input type="number" id="gasto-compras" placeholder="Mercado/Dia a dia">
-                    <input type="number" id="gasto-antojos" placeholder="Antojos y salidas">
+        <section id="lista-proximos-pagos">
+            <div class="header-historial">
+                <h2>Historial de Gastos</h2>
+                <button id="btn-exportar-gastos" class="btn-exportar">Exportar</button>
+            </div>
+            <div class="tabla-contenedor">
+                <table id="tabla-historial">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Categoría</th>
+                            <th>Costo</th>
+                            <th>Prioridad</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-historial"></tbody>
+                </table>
+                <div class="caja-total">
+                    <strong>Total gastado: </strong>
+                    <span id="total-gastado">$0</span>
                 </div>
+                <button id="botonBorrarHistorial" class="btn-limpiar">Borrar Historial</button>
+            </div>
+        </section>
+    </div>
 
-                <!-- Seguimiento de deudas -->
-                <div class="seccion-gastos">
-                    <h3>Deudas</h3>
-                    <input type="number" id="deuda-corto" placeholder="Celular (Corto plazo)">
-                    <input type="number" id="deuda-largo" placeholder="Largo plazo">
-                </div>
+    <!-- ===============================================
+        COLUMNA DERECHA DE GRÁFICO
+        =============================================== -->
+    <div class="columna-derecha">
+        <section id="contenedor-grafico">
+            <h3>Distribución de Gastos</h3>
+            <canvas id="graficoGastos"></canvas>
+        </section>
+    </div>
+</main>
 
-                <button id="botonCalcularGastos">Calcular Gastos</button>
-            </section>
-
-            <!-- Aqui se mostrara el calendario de pagos -->
-            <section id="lista-proximos-pagos">
-                <!--Contenedor flexible para titulo y boton de exportar-->
-                <div class="header-historial">
-                    <h2>Agenda de Gastos</h2>
-                    <button id="boton-exportar">Exportar</button>
-                </div>
-
-                <section id="seccion-historial">
-                    <h2>Pestana de Historial</h2>
-                    <div id="contenedor-historial">
-                        <table id = "tabla-historial">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Descricion</th>
-                                    <th>Costo</th>
-                                    <th>Prioridad</th>
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cuerpo-historial">
-                                <tr>
-                                    <td colspan="5" class="texto-centrado">Aun no hay registros en el historial.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        
-                        <!-- Resumen del total acumulado -->
-                         <div class="caja-total">
-                            <strong>Total gastado: </strong>
-                            <span id="total-gastado">$0</span>
-                         </div>
-                    <button id="botonBorrarHistorial" style="background-color: #dc3545;">Borrar Historial</button>
-                </section>
-                <div id="contenedor-agenda">
-                    <p>Ingresa los datos y dale a "Calcular Gastos" para ver tu agenda.</p>
-                </div>
-            </section>
-        </div>
-    </main>
-    <!--Contenedor para notificaciones flotantes-->
+    <!-- Contenedor para notificaciones flotantes -->
     <div id="notificacion-container" class="notificacion-hidden"></div>
 
-    <!--Modal de confirmacion personalizado-->
+    <!-- Modal de confirmación personalizado -->
     <div id="custom-modal" class="modal-hidden">
         <div class="modal-content">
             <h3 id="modal-titulo">¿Estas seguro?</h3>
-            <p id="modal-texto">Esta accion no se podra deshacer.</p>
+            <p id="modal-texto">Esta acción no se podrá deshacer.</p>
             <div class="modal-actions">
                 <button id="modal-confirmar" class="btn-danger">Confirmar</button>
                 <button id="modal-cancelar" class="btn-secondary">Cancelar</button>
             </div>
         </div>
     </div>
-    <!--Modal informativo-->
+
+    <!-- Modal informativo -->
     <div id="modal-notificacion" class="modal-hidden">
         <div class="modal-content notificacion-card">
             <div id="icono-notificacion">✅</div>
             <div id="mensaje-notificacion-modal"></div>
-
-            <div class="botones-modal-container"style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="botones-modal-container" style="display: flex; flex-direction: column; gap: 10px;">
                 <button id="btn-enviar-email-modal" class="btn-email">📧 Enviar resumen al correo</button>
                 <button id="btn-cerrar-notif" class="boton-primario">Entendido</button>
             </div>
         </div>
     </div>
-    <!--Modal de eliminacion individual-->
+
+    <!-- Modal de eliminación individual -->
     <div id="modal-confirmar-eliminar" class="modal-hidden">
         <div class="modal-content notification-card">
             <div style="font-size: 50px;">🗑️</div>
@@ -173,10 +180,10 @@
         </div>
     </div>
     
-    <!--Llamado del grafico-->
+    <!-- Llamado del gráfico -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     
-    <!--Llamado del script-->
+    <!-- Llamado del script -->
     <script src="script.js"></script>
-    
 </body>
+</html>
