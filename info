@@ -10,10 +10,24 @@ Gestión de Usuario: Sistema básico de visualización de nombre de usuario y ci
 
 Diseño Visual: Paleta de colores profesional basada en azules oscuros (#001f3f) y grises técnicos.
 
-📑 Notas de la versión Beta 0.2:
+📑 Notas de la Beta 0.2 - Actualización de Interfaz
+Corrección de Layout Híbrido (PC/Móvil):
 
-Prioridad de flujo: Ahora el usuario registra sus ingresos, luego sus gastos, y finalmente ve el gráfico como resumen del día/mes.
+Se implementó un sistema de posicionamiento explícito mediante grid-column y grid-row para la vista de escritorio. Esto soluciona el desorden visual causado al eliminar los contenedores div intermedios, permitiendo que las secciones se ubiquen correctamente en dos columnas (40/60).
 
-Flexibilidad: Al usar display: flex y flex-direction: column dentro del media query, el navegador ignora la jerarquía del HTML para priorizar el order que definimos.
+Optimización para Móviles: Se corrigió el error de "desplazamiento a la derecha" en dispositivos móviles mediante el uso de box-sizing: border-box y width: 100% en todas las secciones, garantizando que el contenido esté perfectamente centrado y contenido en la pantalla.
 
-Scroll de seguridad: Si las tablas centradas tienen demasiadas columnas para un celular pequeño, el contenedor permitirá deslizar hacia los lados para no romper el diseño.
+Control de Flujo Visual (Responsive):
+
+Se integró la propiedad order en el bloque @media para forzar un orden lógico en móviles (Ingresos -> Gastos -> Gráfico), independientemente de su posición física en el Grid de escritorio.
+
+Refuerzo de Especificidad CSS:
+
+Se aplicó el uso estratégico de !important en las reglas de estructura base para evitar que estilos heredados o de librerías externas interfieran con el diseño del Dashboard.
+
+Estabilidad de Títulos:
+
+Se preservó y unificó el estilo de títulos y subtítulos, asegurando que el centrado de los encabezados (section h2) sea consistente en ambas vistas.
+
+Instrucción de Mantenimiento:
+Para futuras actualizaciones, recuerda que cualquier cambio en la estructura del Dashboard debe reflejarse tanto en la Sección 2 (PC) como en la Sección 11 (Móvil) para mantener la paridad visual.
