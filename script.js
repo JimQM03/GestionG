@@ -1,3 +1,46 @@
+// ================================================
+// SCRIPT.JS
+// ================================================
+
+// --- CONFIGURACIÓN DE API ---
+function crearAPIURL() {
+    // Si estamos en GitHub Pages, usar el backend de Render
+    if (window.location.hostname.includes('github.io')) {
+        return "https://gestiong-backend.onrender.com";
+    }
+    // Si estamos en localhost
+    else if (window.location.hostname === 'localhost' || 
+             window.location.hostname === '127.0.0.1') {
+        return "http://localhost:5000";
+    }
+    // Por defecto
+    return "https://gestiong-backend.onrender.com";
+}
+
+const API_URL = crearAPIURL();
+console.log(`🌐 Usando API: ${API_URL}`);
+
+// --- VARIABLES GLOBALES ---
+let backendDisponible = true;
+let intentosFallidos = 0;
+const MAX_INTENTOS_FALLIDOS = 3;
+
+// --- SEGURIDAD Y SESIÓN ---
+(function() {
+    console.log("🛠️ Verificando sesión del usuario...");
+    const usuario = localStorage.getItem('usuario_logueado');
+    const USUARIO_VALIDO = "german"; // Añadir esta constante
+    
+    if (usuario !== USUARIO_VALIDO) {
+        console.warn("⚠️ Usuario no autorizado. Redirigiendo...");
+        window.location.href = 'index.html';
+    } else {
+        console.log("✅ Sesión validada para: german");
+        const display = document.getElementById('nombre-usuario-display');
+        if (display) display.textContent = usuario;
+    }
+})();
+
 // recuperación automática en el frontend
 let reconexionIntentos = 0;
 const MAX_RECONEXIONES = 5;
@@ -76,66 +119,6 @@ window.fetch = async function(...args) {
     }
 };
 
-
-// Verificar conexión al cargar la página
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log("🔍 Verificando conexión inicial...");
-    const activo = await verificarBackend();
-    
-    if (!activo) {
-        console.log("⚠️ Backend no disponible al inicio");
-        mostrarNotificacion('⏳ Conectando con el servidor...', 'info');
-        
-        // Intentar reconexión automática
-        setTimeout(async () => {
-            await recuperarConexion();
-        }, 2000);
-    }
-});
-
-// ================================================
-// SCRIPT.JS
-// ================================================
-
-// --- CONFIGURACIÓN DE API ---
-function crearAPIURL() {
-    // Si estamos en GitHub Pages, usar el backend de Render
-    if (window.location.hostname.includes('github.io')) {
-        return "https://gestiong-backend.onrender.com";
-    }
-    // Si estamos en localhost
-    else if (window.location.hostname === 'localhost' || 
-             window.location.hostname === '127.0.0.1') {
-        return "http://localhost:5000";
-    }
-    // Por defecto
-    return "https://gestiong-backend.onrender.com";
-}
-
-const API_URL = crearAPIURL();
-console.log(`🌐 Usando API: ${API_URL}`);
-
-// --- VARIABLES GLOBALES ---
-let backendDisponible = true;
-let intentosFallidos = 0;
-const MAX_INTENTOS_FALLIDOS = 3;
-
-// --- SEGURIDAD Y SESIÓN ---
-(function() {
-    console.log("🛠️ Verificando sesión del usuario...");
-    const usuario = localStorage.getItem('usuario_logueado');
-    const USUARIO_VALIDO = "german"; // Añadir esta constante
-    
-    if (usuario !== USUARIO_VALIDO) {
-        console.warn("⚠️ Usuario no autorizado. Redirigiendo...");
-        window.location.href = 'index.html';
-    } else {
-        console.log("✅ Sesión validada para: german");
-        const display = document.getElementById('nombre-usuario-display');
-        if (display) display.textContent = usuario;
-    }
-})();
-
 // --- NOTIFICACIONES ---
 function mostrarNotificacion(mensaje, tipo = 'success') {
     const notif = document.createElement('div');
@@ -204,7 +187,7 @@ async function guardarIngreso() {
                 monto: parseFloat(monto), 
                 clases: 0,
                 descripcion: descripcion,
-                fecha: fecha // ¡IMPORTANTE! Enviar la fecha
+                fecha: fecha
             })
         });
         
@@ -217,20 +200,55 @@ async function guardarIngreso() {
         console.log("✅ Ingreso guardado con éxito:", resultado);
         mostrarNotificacion('✅ Ingreso guardado correctamente', 'success');
         
-        // Limpiar formulario
-        document.getElementById('fecha-ingreso').value = '';
-        document.getElementById('monto-ingreso').value = '';
-        document.getElementById('desc-ingreso').value = '';
+        // ✅ USAR FUNCIÓN DE LIMPIEZA
+        limpiarFormularios();
         
-        // Actualizar interfaz
-        await cargarIngresos();
-        await actualizarTotales();
-        await actualizarGrafico();
+        // Actualizar interfaz CON PEQUEÑO RETRASO
+        setTimeout(async () => {
+            await actualizarTodo();
+        }, 300);
         
     } catch (error) { 
         console.error("❌ Error al guardar ingreso:", error.message);
         mostrarNotificacion(`Error: ${error.message}`, 'error');
     }
+}
+
+// --- FUNCIÓN PARA VERIFICAR SI BACKEND PROCESÓ ---
+async function verificarProcesamiento(id, tipo) {
+    console.log(`🔍 Verificando procesamiento de ${tipo} ID: ${id}`);
+    
+    const maxIntentos = 5;
+    const delay = 500; // ms entre intentos
+    
+    for (let i = 0; i < maxIntentos; i++) {
+        try {
+            const endpoint = tipo === 'gasto' ? '/obtener-gastos' : '/obtener-ingresos';
+            const res = await fetch(`${API_URL}${endpoint}?cache=${Date.now()}`);
+            
+            if (res.ok) {
+                const data = await res.json();
+                const items = tipo === 'gasto' ? data.gastos : data.ingresos;
+                
+                // Buscar el item recién creado
+                const encontrado = items.find(item => item.id === id);
+                if (encontrado) {
+                    console.log(`✅ ${tipo} ${id} confirmado en backend`);
+                    return true;
+                }
+            }
+            
+            // Si no se encontró, esperar y reintentar
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+        } catch (error) {
+            console.log(`⚠️ Intento ${i+1} falló: ${error.message}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    
+    console.log(`⚠️ No se pudo confirmar ${tipo} ${id} después de ${maxIntentos} intentos`);
+    return false;
 }
 
 // 2. CARGAR  Y MOSTRAR INGRESOS
@@ -422,7 +440,7 @@ async function guardarGasto() {
         return;
     }
     
-    // Obtener valores del formulario
+    // Obtener valores del formulario ANTES de limpiar
     const fecha = document.getElementById('fecha-global-registro').value;
     const categoria = document.getElementById('categoria-gasto').value;
     const monto = document.getElementById('valor-gasto-real').value;
@@ -456,14 +474,15 @@ async function guardarGasto() {
         console.log("✅ Gasto guardado con éxito:", resultado);
         mostrarNotificacion('✅ Gasto guardado correctamente', 'success');
         
-        // Limpiar formulario (mantener categoría seleccionada)
+        // ✅ CORRECCIÓN: Limpiar formulario DESPUÉS de éxito
         document.getElementById('valor-gasto-real').value = '';
         document.getElementById('desc-gasto').value = '';
+        // NOTA: Mantener fecha y categoría seleccionadas
         
-        // Actualizar interfaz
-        await cargarGastos();
-        await actualizarTotales();
-        await actualizarGrafico();
+        // Actualizar interfaz CON RETRASO MÍNIMO
+        setTimeout(async () => {
+            await actualizarTodo();
+        }, 300); // Pequeño retraso para asegurar que el backend procesó
         
     } catch (error) { 
         console.error("❌ Error al guardar gasto:", error.message);
@@ -496,7 +515,7 @@ async function cargarGastos() {
     }
 }
 
-// 3. ACTUALIZAR TABLA DE GASTOS (REEMPLAZA a actualizarTablaConDatos)
+// 3. ACTUALIZAR TABLA DE GASTOS 
 function actualizarTablaGastos(gastos) {
     console.log("🔄 Actualizando tabla de gastos...");
     
@@ -712,6 +731,22 @@ async function actualizarTotales() {
     } catch (e) { 
         console.error("❌ Error al actualizar totales:", e.message);
     }
+}
+
+// --- FUNCIÓN PARA LIMPIAR FORMULARIOS ---
+function limpiarFormularios() {
+    console.log("🧹 Limpiando formularios...");
+    
+    // Limpiar formulario de ingresos
+    document.getElementById('fecha-ingreso').value = new Date().toISOString().split('T')[0];
+    document.getElementById('monto-ingreso').value = '';
+    document.getElementById('desc-ingreso').value = '';
+    
+    // Limpiar formulario de gastos (mantener fecha y categoría)
+    document.getElementById('valor-gasto-real').value = '';
+    document.getElementById('desc-gasto').value = '';
+    
+    console.log("✅ Formularios limpiados");
 }
 
 // --- FUNCIÓN PARA ACTUALIZAR EL GRÁFICO ---
@@ -967,15 +1002,18 @@ function mostrarGraficoVacio() {
     centerText.fillText('No hay datos', ctx.width / 2, ctx.height / 2);
 }
 
-// --- FUNCIÓN PARA ACTUALIZAR DESPUÉS DE GUARDAR GASTOS ---
+// --- FUNCIÓN PARA ACTUALIZAR ---
 async function actualizarTodo() {
     console.log("🔄 Actualizando toda la interfaz...");
     
     try {
-        await cargarIngresos();
-        await cargarGastos();
-        await actualizarTotales();
-        await actualizarGrafico();
+        // Usar Promise.all para cargar en paralelo
+        await Promise.all([
+            cargarIngresos(),
+            cargarGastos(),
+            actualizarTotales(),
+            actualizarGrafico()
+        ]);
         
         console.log("✅ Interfaz completamente actualizada");
         
@@ -1096,12 +1134,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Inicializar aplicación
     inicializarAplicacion();
     
-    // 6. Actualizar periódicamente (cada 30 segundos)
     setInterval(() => {
-        if (backendDisponible) {
-            actualizarTodo();
+        if (backendDisponible && document.visibilityState === 'visible') {
+            console.log("⏰ Actualización periódica programada...");
+            // Solo actualizar totales y gráfico, no toda la tabla
+            actualizarTotales();
+            actualizarGrafico();
         }
-    }, 30000);
+    }, 60000); // 60 segundos
 
     console.log("✅ Eventos vinculados correctamente");
 });
@@ -1276,6 +1316,10 @@ async function inicializarAplicacion() {
         
         // 3. Configurar eventos de teclado
         configurarEventosTeclado();
+        
+        // 4. Iniciar verificaciones periódicas (¡AGREGAR!)
+        iniciarVerificacionesPeriodicas();
+        iniciarActualizacionPeriodicaGrafico();
         
         console.log("✅ Aplicación inicializada correctamente");
         
