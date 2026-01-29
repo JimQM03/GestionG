@@ -219,29 +219,20 @@ async function guardarIngreso() {
         console.log("✅ Ingreso guardado con éxito:", resultado);
         mostrarNotificacion('✅ Ingreso guardado correctamente', 'success');
         
-        // ✅ USAR FUNCIÓN DE LIMPIEZA
+        // ✅ LIMPIAR FORMULARIOS
         limpiarFormularios();
         
-        // ✅ CORRECCIÓN: VERIFICAR QUE EL BACKEND PROCESÓ ANTES DE ACTUALIZAR
-        const procesado = await verificarProcesamiento(resultado.id, 'ingreso');
-        
-        if (procesado) {
-            console.log("✅ Backend confirmó el ingreso, actualizando interfaz...");
-            await actualizarTodo();
-        } else {
-            console.log("⚠️ Backend no confirmó aún, esperando y reintentando...");
-            // Esperar un poco más y actualizar de todos modos
-            setTimeout(async () => {
-                await actualizarTodo();
-            }, 1000);
-        }
+        // ✅ REFRESCAR LA PÁGINA DESPUÉS DE 500ms
+        setTimeout(() => {
+            console.log("🔄 Refrescando página para actualizar datos...");
+            window.location.reload();
+        }, 500);
         
     } catch (error) { 
         console.error("❌ Error al guardar ingreso:", error.message);
         mostrarNotificacion(`Error: ${error.message}`, 'error');
     }
 }
-
 // --- FUNCIÓN PARA VERIFICAR SI BACKEND PROCESÓ ---
 async function verificarProcesamiento(id, tipo) {
     console.log(`🔍 Verificando procesamiento de ${tipo} ID: ${id}`);
@@ -502,22 +493,14 @@ async function guardarGasto() {
         console.log("✅ Gasto guardado con éxito:", resultado);
         mostrarNotificacion('✅ Gasto guardado correctamente', 'success');
         
-        // ✅ CORRECCIÓN: USAR FUNCIÓN DE LIMPIEZA UNIFICADA (igual que ingresos)
+        // ✅ CORRECCIÓN: USAR FUNCIÓN DE LIMPIEZA UNIFICADA
         limpiarFormularios();
         
-        // ✅ CORRECCIÓN: VERIFICAR QUE EL BACKEND PROCESÓ ANTES DE ACTUALIZAR
-        const procesado = await verificarProcesamiento(resultado.id, 'gasto');
-        
-        if (procesado) {
-            console.log("✅ Backend confirmó el gasto, actualizando interfaz...");
-            await actualizarTodo();
-        } else {
-            console.log("⚠️ Backend no confirmó aún, esperando y reintentando...");
-            // Esperar un poco más y actualizar de todos modos
-            setTimeout(async () => {
-                await actualizarTodo();
-            }, 1000);
-        }
+        // ✅ REFRESCAR LA PÁGINA DESPUÉS DE 500ms
+        setTimeout(() => {
+            console.log("🔄 Refrescando página para actualizar datos...");
+            window.location.reload();
+        }, 500);
         
     } catch (error) { 
         console.error("❌ Error al guardar gasto:", error.message);
