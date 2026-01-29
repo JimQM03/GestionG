@@ -111,7 +111,7 @@ label[for="fecha-ingreso"] {
     border: none !important; /* Sin líneas */
 }
 
-/* 3. MANTENER EL CONTENEDOR BLANCO IMPECABLE */
+
 section {
     background-color: white !important;
     padding: 25px;
@@ -280,6 +280,14 @@ button:hover {
     font-size: 13px !important;
 }
 
+/* Botón Exportar pequeño al lado */
+.btn-exportar {
+    width: auto !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    margin: 0 !important;
+}
+
 /* ===============================================
     5. SELECT DE FECHA
    =============================================== */
@@ -303,24 +311,10 @@ button:hover {
 }
 
 /* ===============================================
-    6. TABLAS DE HISTORIAL
+    6. TABLAS DE HISTORIAL (ESTRUCTURA DE COLUMNAS)
    =============================================== */
-/* Alineación horizontal: Título a la izquierda, Botón a la derecha */
-.header-tabla, 
-.header-historial {
-    display: flex;
-    flex-direction: row; 
-    justify-content: space-between; 
-    align-items: center;
-    margin-bottom: 15px;
-    width: 100%;
-}
 
-.header-tabla h3, 
-.header-historial h2 {
-    margin: 0;
-}
-
+/* Contenedor con scroll para evitar que la tabla rompa el diseño */
 .tabla-contenedor {
     width: 100%;
     overflow-x: auto; 
@@ -329,15 +323,37 @@ button:hover {
     border: 1px solid #dee2e6;
 }
 
-/* Configuración de tablas para evitar solapamiento */
+/* Contenedor del Título y el Botón Exportar */
+.header-tabla, 
+.header-historial {
+    display: flex !important;
+    flex-direction: row !important; /* Fuerza línea horizontal */
+    justify-content: space-between !important; /* Título izquierda, Botón derecha */
+    align-items: center !important;
+    margin-bottom: 20px;
+    width: 100%;
+    border-bottom: 2px solid #e6f2ff; /* La línea decorativa va en el contenedor */
+    padding-bottom: 10px;
+}
+
+/* Ajuste para que el título no empuje al botón */
+.header-tabla h3, 
+.header-historial h2 {
+    margin: 0 !important; /* Quita márgenes que separan */
+    border-bottom: none !important; /* Quita la línea individual para usar la del contenedor */
+    padding-bottom: 0 !important;
+    font-size: 20px !important;
+}
+
+/* Forzamos que las tablas respeten los anchos definidos */
 #tabla-ingresos, 
 #tabla-historial {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* Fuerza a las columnas a respetar el ancho asignado */
+    table-layout: fixed; 
 }
 
-/* Estilos de cabecera comunes */
+/* Estilos de encabezados */
 #tabla-ingresos th, 
 #tabla-historial th {
     background-color: #001f3f;
@@ -345,34 +361,37 @@ button:hover {
     padding: 12px 8px;
     text-align: left;
     font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* --- AJUSTE ESPECÍFICO DE COLUMNAS PARA INGRESOS --- */
-/* (Esto evita que la tabla se estire y pise a la del centro) */
-#tabla-ingresos th:nth-child(1), #tabla-ingresos td:nth-child(1) { width: 85px; }  /* Fecha */
-#tabla-ingresos th:nth-child(2), #tabla-ingresos td:nth-child(2) { width: auto; }  /* Descripción (Flexible) */
-#tabla-ingresos th:nth-child(3), #tabla-ingresos td:nth-child(3) { width: 95px; }  /* Monto */
-#tabla-ingresos th:nth-child(4), #tabla-ingresos td:nth-child(4) { width: 50px; }  /* Acción */
+/* --- COLUMNAS TABLA INGRESOS (4 COLUMNAS) --- */
+#tabla-ingresos th:nth-child(1), #tabla-ingresos td:nth-child(1) { width: 90px; }  /* Fecha */
+#tabla-ingresos th:nth-child(2), #tabla-ingresos td:nth-child(2) { width: auto; }  /* Descripción */
+#tabla-ingresos th:nth-child(3), #tabla-ingresos td:nth-child(3) { width: 100px; } /* Monto */
+#tabla-ingresos th:nth-child(4), #tabla-ingresos td:nth-child(4) { width: 65px; text-align: center; } /* Acción */
 
-/* --- COLUMNAS TABLA GASTOS (6 COLUMNAS - CORREGIDO) --- */
-#tabla-historial th:nth-child(1) { width: 90px; }  /* Fecha */
-#tabla-historial th:nth-child(2) { width: auto; }  /* Descripción */
-#tabla-historial th:nth-child(3) { width: 100px; } /* Categoría */
-#tabla-historial th:nth-child(4) { width: 90px; }  /* Costo */
-#tabla-historial th:nth-child(5) { width: 80px; }  /* Prioridad */
-#tabla-historial th:nth-child(6) { width: 60px; }  /* Acción */
+/* --- COLUMNAS TABLA GASTOS (6 COLUMNAS - CORRECCIÓN DE ALINEACIÓN) --- */
+#tabla-historial th:nth-child(1), #tabla-historial td:nth-child(1) { width: 95px; }  /* Fecha */
+#tabla-historial th:nth-child(2), #tabla-historial td:nth-child(2) { width: auto; }  /* Descripción */
+#tabla-historial th:nth-child(3), #tabla-historial td:nth-child(3) { width: 100px; } /* Categoría */
+#tabla-historial th:nth-child(4), #tabla-historial td:nth-child(4) { width: 90px; }  /* Costo */
+#tabla-historial th:nth-child(5), #tabla-historial td:nth-child(5) { width: 90px; }  /* Prioridad */
+#tabla-historial th:nth-child(6), #tabla-historial td:nth-child(6) { width: 65px; text-align: center; } /* Acción */
 
+/* Estilos de las celdas de datos */
 #tabla-ingresos td, 
 #tabla-historial td {
-    padding: 10px 8px;
+    padding: 12px 8px;
     border-bottom: 1px solid #eee;
-    font-size: 12px;
-    white-space: normal;      /* Permite que el texto largo baje de línea */
-    word-wrap: break-word;    /* Rompe palabras largas */
-    overflow-wrap: break-word;
+    font-size: 13px;
+    color: #333;
+    white-space: normal;
+    word-wrap: break-word;
+    vertical-align: middle;
 }
 
-/* Colores de montos y estados */
+/* Colores dinámicos para montos */
 #tabla-ingresos td:nth-child(3) { 
     color: #28a745; 
     font-weight: bold; 
@@ -383,6 +402,7 @@ button:hover {
     font-weight: bold; 
 }
 
+/* Efecto visual al pasar el mouse */
 #tabla-ingresos tr:hover, 
 #tabla-historial tr:hover {
     background-color: #f8f9fa;
