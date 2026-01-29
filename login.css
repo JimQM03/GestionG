@@ -1,0 +1,210 @@
+/* ===============================================
+    LOGIN - GESTIONG BETA 0.2
+   =============================================== */
+
+/* ===============================================
+    1. VARIABLES Y CONFIGURACIÓN BASE
+   =============================================== */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+
+:root {
+    --primary: #007bff;
+    --primary-hover: #0056b3;
+    --dark: #001f3f;
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --error: #dc3545;
+}
+
+body.cuerpo-login {
+    background: radial-gradient(circle at top right, #003366, #001f3f);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* ===============================================
+    2. CONTENEDOR Y TARJETA (GLASSMORPHISM)
+   =============================================== */
+.login-wrapper {
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.tarjeta-acceso {
+    background: var(--glass-bg);
+    backdrop-filter: blur(15px);
+    padding: 40px;
+    border-radius: 30px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+}
+
+/* ===============================================
+    3. CABECERA Y DATOS DE ACCESO
+   =============================================== */
+.login-icon-top {
+    font-size: 45px;
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+.login-titulo {
+    color: var(--dark);
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 15px 0;
+    letter-spacing: -1px;
+}
+
+.login-subtitulo {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.8;
+    margin-bottom: 30px;
+    background: rgba(0, 123, 255, 0.05);
+    padding: 15px;
+    border-radius: 15px;
+    border: 1px dashed rgba(0, 123, 255, 0.2);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.login-subtitulo strong {
+    color: var(--dark);
+    font-weight: 700;
+}
+
+/* ===============================================
+    4. FORMULARIO E INPUTS CON ICONOS
+   =============================================== */
+.campo-grupo {
+    text-align: left;
+    margin-bottom: 22px;
+}
+
+.etiqueta-login {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 8px;
+    padding-left: 5px;
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Iconos internos */
+.input-with-icon i {
+    position: absolute;
+    left: 16px;
+    color: #94a3b8;
+    font-size: 16px;
+    transition: color 0.3s ease;
+    pointer-events: none;
+}
+
+.input-with-icon input {
+    width: 100%;
+    padding: 14px 15px 14px 45px !important;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    font-size: 15px;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    color: var(--dark);
+}
+
+.input-with-icon input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
+}
+
+/* Cambio de color del icono al hacer foco */
+.input-with-icon input:focus + i {
+    color: var(--primary);
+}
+
+/* ===============================================
+    5. BOTONES Y ACCIONES
+   =============================================== */
+#botonEntrar {
+    width: 100%;
+    padding: 16px;
+    background: var(--dark);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#botonEntrar:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+}
+
+#botonEntrar:active {
+    transform: translateY(0);
+}
+
+/* ===============================================
+    6. PIE DE PÁGINA Y ANIMACIONES
+   =============================================== */
+.login-footer {
+    margin-top: 25px;
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Animación de error (Shake) */
+.shake {
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+    40%, 60% { transform: translate3d(3px, 0, 0); }
+}
+
+/* ===============================================
+    7. RESPONSIVE
+   =============================================== */
+@media (max-width: 480px) {
+    .tarjeta-acceso {
+        padding: 30px 20px;
+        border-radius: 20px;
+    }
+    
+    .login-titulo {
+        font-size: 26px;
+    }
+}

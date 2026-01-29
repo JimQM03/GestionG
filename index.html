@@ -3,28 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="login.css">
     <title>GestionG - Iniciar Sesión</title>
 </head>
 <body class="cuerpo-login">
 
     <main class="login-wrapper">
         <section class="tarjeta-acceso">
+            <div class="login-icon-top"><i class="fas fa-user-shield"></i></div>
             <h1 class="login-titulo">Acceso a GestionG</h1>
-            <p class="login-subtitulo">Usuario: <strong>german</strong><br>Contraseña: <strong>Germancho1984</strong></p>
+            
+            <p class="login-subtitulo">
+                Usuario: <strong>german</strong><br>
+                Contraseña: <strong>Germancho1984</strong>
+            </p>
             
             <form id="formLogin">
                 <div class="campo-grupo">
                     <label class="etiqueta-login">Usuario:</label>
-                    <input type="text" id="usuario" placeholder="Nombre de Usuario" required>
+                    <div class="input-with-icon">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="usuario" placeholder="Nombre de Usuario" required>
+                    </div>
                 </div>
 
                 <div class="campo-grupo">
                     <label class="etiqueta-login">Contraseña:</label>
-                    <input type="password" id="password" placeholder="********" required>
+                    <div class="input-with-icon">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="********" required>
+                    </div>
                 </div>
 
-                <button type="submit" id="botonEntrar">Ingresar</button>
+                <button type="submit" id="botonEntrar">
+                    Ingresar
+                </button>
             </form>
 
             <div class="login-footer">
