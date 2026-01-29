@@ -161,6 +161,25 @@ function configurarEventosTeclado() {
     });
 }
 
+// --- FUNCIÓN PARA LIMPIAR FORMULARIOS ---
+function limpiarFormularios() {
+    console.log("🧹 Limpiando formularios...");
+    
+    // Restablecer fecha de ingresos a hoy
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fecha-ingreso').value = hoy;
+    
+    // Limpiar campos de ingreso
+    document.getElementById('monto-ingreso').value = '';
+    document.getElementById('desc-ingreso').value = '';
+    
+    // Limpiar solo campos específicos de gastos (mantener fecha y categoría)
+    document.getElementById('valor-gasto-real').value = '';
+    document.getElementById('desc-gasto').value = '';
+    
+    console.log("✅ Formularios limpiados");
+}
+
 // --- FUNCIONES DE INGRESOS ---
 
 // 1. GUARDAR INGRESO
@@ -203,10 +222,19 @@ async function guardarIngreso() {
         // ✅ USAR FUNCIÓN DE LIMPIEZA
         limpiarFormularios();
         
-        // Actualizar interfaz CON PEQUEÑO RETRASO
-        setTimeout(async () => {
+        // ✅ CORRECCIÓN: VERIFICAR QUE EL BACKEND PROCESÓ ANTES DE ACTUALIZAR
+        const procesado = await verificarProcesamiento(resultado.id, 'ingreso');
+        
+        if (procesado) {
+            console.log("✅ Backend confirmó el ingreso, actualizando interfaz...");
             await actualizarTodo();
-        }, 300);
+        } else {
+            console.log("⚠️ Backend no confirmó aún, esperando y reintentando...");
+            // Esperar un poco más y actualizar de todos modos
+            setTimeout(async () => {
+                await actualizarTodo();
+            }, 1000);
+        }
         
     } catch (error) { 
         console.error("❌ Error al guardar ingreso:", error.message);
@@ -474,15 +502,22 @@ async function guardarGasto() {
         console.log("✅ Gasto guardado con éxito:", resultado);
         mostrarNotificacion('✅ Gasto guardado correctamente', 'success');
         
-        // ✅ CORRECCIÓN: Limpiar formulario DESPUÉS de éxito
-        document.getElementById('valor-gasto-real').value = '';
-        document.getElementById('desc-gasto').value = '';
-        // NOTA: Mantener fecha y categoría seleccionadas
+        // ✅ CORRECCIÓN: USAR FUNCIÓN DE LIMPIEZA UNIFICADA (igual que ingresos)
+        limpiarFormularios();
         
-        // Actualizar interfaz CON RETRASO MÍNIMO
-        setTimeout(async () => {
+        // ✅ CORRECCIÓN: VERIFICAR QUE EL BACKEND PROCESÓ ANTES DE ACTUALIZAR
+        const procesado = await verificarProcesamiento(resultado.id, 'gasto');
+        
+        if (procesado) {
+            console.log("✅ Backend confirmó el gasto, actualizando interfaz...");
             await actualizarTodo();
-        }, 300); // Pequeño retraso para asegurar que el backend procesó
+        } else {
+            console.log("⚠️ Backend no confirmó aún, esperando y reintentando...");
+            // Esperar un poco más y actualizar de todos modos
+            setTimeout(async () => {
+                await actualizarTodo();
+            }, 1000);
+        }
         
     } catch (error) { 
         console.error("❌ Error al guardar gasto:", error.message);
@@ -733,21 +768,7 @@ async function actualizarTotales() {
     }
 }
 
-// --- FUNCIÓN PARA LIMPIAR FORMULARIOS ---
-function limpiarFormularios() {
-    console.log("🧹 Limpiando formularios...");
-    
-    // Limpiar formulario de ingresos
-    document.getElementById('fecha-ingreso').value = new Date().toISOString().split('T')[0];
-    document.getElementById('monto-ingreso').value = '';
-    document.getElementById('desc-ingreso').value = '';
-    
-    // Limpiar formulario de gastos (mantener fecha y categoría)
-    document.getElementById('valor-gasto-real').value = '';
-    document.getElementById('desc-gasto').value = '';
-    
-    console.log("✅ Formularios limpiados");
-}
+
 
 // --- FUNCIÓN PARA ACTUALIZAR EL GRÁFICO ---
 async function actualizarGrafico() {
